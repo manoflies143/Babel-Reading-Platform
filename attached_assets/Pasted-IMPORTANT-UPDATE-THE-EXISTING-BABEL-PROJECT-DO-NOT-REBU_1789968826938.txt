@@ -1,0 +1,279 @@
+IMPORTANT: UPDATE THE EXISTING BABEL PROJECT. DO NOT REBUILD OR REWRITE THE PROJECT.
+
+I already have the Babel interface from the previous build and I LIKE THE CURRENT DESIGN. Preserve the existing UI, components, navigation, styling, and working features.
+
+Make only the following additions and modifications.
+
+EFFICIENCY RULES:
+
+* Reuse existing components.
+* Reuse the existing CSS/design system.
+* Do not change the framework.
+* Do not install unnecessary dependencies.
+* Do not create duplicate pages/components.
+* Do not generate a large novel catalog.
+* Do not replace working code just to implement these features.
+* Make the smallest necessary code changes.
+* Fix only errors caused by these changes.
+
+==================================================
+
+1. ACCOUNTS
+   ==================================================
+
+Add:
+
+* Sign In
+* Create Account
+* Profile
+* Logout
+
+During account creation allow:
+
+* Reader Account
+* Publisher Account
+
+Reader:
+
+* Free
+* Reading
+* Favorites
+* Bookmarks
+* History
+* Continue Reading
+* Reading settings
+
+Publisher:
+
+* Everything in Reader
+* Publisher Dashboard
+* Novel publishing tools
+* Chapter management
+
+Publisher accounts will become a MONTHLY PAID PLAN in the future.
+
+Do NOT implement payments now.
+
+Show:
+"Publisher Plan — Monthly subscription coming soon"
+
+Create the account structure so real subscription/payment
+verification can be added later.
+
+For this prototype, use the simplest existing/local
+authentication approach already available in the project.
+
+==================================================
+2. READING HISTORY
+==================
+
+Add functional reading history using the project's
+existing storage approach. If there is no backend yet,
+use localStorage.
+
+Track:
+
+* Novel
+* Chapter
+* Reading progress
+* Last opened
+* Continue Reading position
+
+Library should contain:
+
+* Continue Reading
+* History
+* Favorites
+* Bookmarks
+
+Allow:
+
+* Resume
+* Remove history item
+* Clear history
+* Favorite/unfavorite
+* Bookmark/unbookmark
+
+==================================================
+3. READING EXPERIENCE
+=====================
+
+Improve the existing reader without redesigning it.
+
+Add reading modes:
+
+* Vertical Scroll
+* Continuous Reading
+* Swipe/Page Mode
+* Tap Navigation
+
+Add readability controls:
+
+* Font size
+* Font family
+* Line spacing
+* Text width
+* Paragraph spacing
+
+Add:
+
+* Previous chapter
+* Next chapter
+* Chapter selector
+* Reading progress
+* Bookmark current position
+* Automatic progress saving
+
+Swipe mode:
+
+* Swipe left = next
+* Swipe right = previous
+
+Tap mode:
+
+* Tap right = next
+* Tap left = previous
+
+Allow reader controls to hide/show when tapping.
+
+==================================================
+4. PUBLISHER DASHBOARD
+======================
+
+KEEP THE EXISTING PUBLISHER DASHBOARD.
+
+Improve it rather than rebuilding it.
+
+Publishing should support:
+
+Novel information:
+
+* Title
+* Author/Pen name
+* Description
+* Genre
+* Tags
+* Language
+* Ongoing/Completed
+* Cover upload
+
+Publishing methods:
+
+A. COPY/PASTE
+
+* Paste manuscript/chapter
+* Edit before publishing
+* Preview
+
+B. FILE IMPORT
+
+* PDF
+* TXT
+
+Implement lightweight PDF text extraction if it can
+be done without adding unnecessary complexity.
+
+If not, create the upload interface and keep PDF processing
+modular for later.
+
+C. MANUAL CHAPTER
+
+* Chapter title
+* Chapter number
+* Text editor
+* Save draft
+* Preview
+* Publish
+
+Chapter editor:
+
+* Bold
+* Italic
+* Headings
+* Paragraph breaks
+* Save draft
+* Preview
+* Publish
+* Edit
+* Delete
+
+Each novel:
+
+* Edit
+* Add Chapter
+* Preview
+* Publish/Unpublish
+* Change Cover
+* Manage Chapters
+
+==================================================
+5. SETTINGS
+===========
+
+PRESERVE THE EXISTING SETTINGS DESIGN.
+
+Keep theme controls inside Settings.
+
+Do NOT add a light/dark shortcut to the main interface.
+
+Keep:
+Dark = Orange + Black
+Light = Blue + White
+
+Add reading preferences:
+
+* Reading mode
+* Font size
+* Font
+* Line spacing
+* Text width
+* Paragraph spacing
+
+==================================================
+6. FUTURE APP
+=============
+
+Do NOT build the mobile app now.
+
+Only keep the architecture ready for future:
+
+* Download chapters/novels
+* Offline reading
+* Account-based downloads
+* Protected in-app content
+
+These will be implemented later in the dedicated Babel app.
+
+==================================================
+7. DO NOT ADD YET
+=================
+
+Do NOT build:
+
+* Social messaging
+* AI story generation
+* Payment processing
+* Advanced analytics
+* Recommendation AI
+* Full mobile app
+* Advanced DRM
+* Large sample library
+
+==================================================
+FINAL REQUIREMENT
+=================
+
+Preserve all existing working Babel features and design.
+
+After making the changes:
+
+1. Check for errors.
+2. Make sure existing navigation still works.
+3. Make sure the existing design remains intact.
+4. Test the new account UI.
+5. Test reading history.
+6. Test reading modes.
+7. Test publisher workflow.
+8. Test the project runs successfully.
+
+Do not rewrite unrelated files.
