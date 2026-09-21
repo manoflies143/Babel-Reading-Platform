@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Babel Reading Platform"
+description = "A modern, responsive novel and light novel reading platform with discovery, personal library, publisher workspace, settings, and novel detail views."
+version = "1.0.0"
+id = "artifacts/babel-reading-platform"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19861
+
+[services.development]
+run = "pnpm --filter @workspace/babel-reading-platform run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/babel-reading-platform", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/babel-reading-platform/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19861"
+BASE_PATH = "/"

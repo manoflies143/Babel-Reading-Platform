@@ -1,0 +1,138 @@
+You are building BABEL, a modern novel and light novel reading platform.
+
+BRAND:
+Name: Babel
+Identity: Minimalist library for readers.
+Mission: Provide a safe, secure, optimized reading platform
+where readers can enjoy novels and light novels.
+
+IMPORTANT:
+Build the foundation first.
+Do not add unnecessary features.
+Do not create a large sample novel catalog.
+I will manually add novels later.
+
+TECHNOLOGY:
+- React
+- JavaScript
+- CSS
+- Responsive design
+- Component-based architecture
+
+DESIGN INSPIRATION:
+Create a premium reading platform inspired by the
+layout quality of Crunchyroll and the navigation
+experience of Webtoon.
+
+Do not copy their branding, assets, or proprietary designs.
+Create an original Babel interface designed for novels.
+
+COLOR THEMES:
+Dark Mode:
+- Orange and black
+- Cinematic appearance
+- Comfortable for reading
+
+Light Mode:
+- Blue and white
+- Clean and modern
+
+Keep light/dark mode controls inside Settings.
+Do not create a theme shortcut on the main interface.
+
+PAGES:
+
+1. HOME
+- Babel logo
+- Navigation panel
+- Search bar
+- Featured novels section (empty state)
+- Popular novels section (empty state)
+- Recently added section (empty state)
+- Genre categories
+- Modern responsive layout
+
+2. DISCOVER
+- Browse novels
+- Genre filters
+- Search interface
+- Empty states for missing content
+
+3. LIBRARY
+- Favorites
+- Reading history
+- Continue reading
+- Bookmarks
+- Empty states
+
+4. PUBLISHER DASHBOARD
+Create the dashboard interface only for now.
+
+Include:
+- Add New Novel
+- Import PDF button
+- Copy and paste manuscript editor
+- Cover image upload placeholder
+- Novel title
+- Author
+- Description
+- Genre selection
+- Chapter management
+- Draft and Published sections
+
+IMPORTANT:
+Do not implement full PDF processing yet.
+Create the UI and structure so it can be added later.
+
+5. SETTINGS
+Include:
+- Theme selection
+- Reading preferences
+- Font size
+- Text spacing
+- Account settings
+- Interface customization placeholders
+
+6. NOVEL DETAILS
+Create a page structure for:
+- Cover image
+- Title
+- Author
+- Description
+- Genre
+- Chapter list
+- Start reading button
+
+DESIGN REQUIREMENTS:
+- Modern typography
+- Smooth navigation
+- Responsive layout
+- Clean spacing
+- Reusable components
+- Professional appearance
+- Avoid excessive animations
+- Avoid unnecessary dependencies
+
+NAVIGATION:
+Create a sidebar or responsive navigation panel.
+Make it easy to access Home, Discover, Library,
+Publisher Dashboard, and Settings.
+
+DATA:
+Use minimal placeholder data only.
+Do not generate a large collection of novels.
+Prepare the architecture for manually added content.
+
+DO NOT BUILD YET:
+- AI story generation
+- Social messaging
+- Payment systems
+- Advanced recommendations
+- Mobile app
+- Offline downloads
+
+Before finishing:
+- Ensure the project runs without errors.
+- Check responsive layouts.
+- Keep the code organized.
+- Explain the files created and how to run the project.

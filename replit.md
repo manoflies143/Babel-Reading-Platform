@@ -1,6 +1,6 @@
-# [Project name]
+# Babel Reading Platform
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A responsive novel and light novel reading platform with discovery, personal library views, publisher tools, reader preferences, and novel details.
 
 ## Run & Operate
 
@@ -22,15 +22,26 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/babel-reading-platform/src/App.tsx` — routed application shell, local placeholder content, and client-side interactions
+- `artifacts/babel-reading-platform/src/index.css` — Babel theme tokens, typography, responsive layout, and interaction styling
+- `artifacts/babel-reading-platform/package.json` — web app scripts and dependencies
+- `artifacts/babel-reading-platform/.replit-artifact/artifact.toml` — managed web workflow and root preview routing
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The first release is frontend-only with local state and minimal illustrative content; backend persistence can be added after the reading and publishing workflows are validated.
+- Wouter handles the app routes so the full surface remains lightweight and works under the root artifact path.
+- Theme and reading preferences are owned by Settings, keeping the main reading navigation focused.
+- The publisher area is deliberately a structured UI shell; PDF import and file processing are placeholders until the publishing model is defined.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Home provides a featured reading entry point and intentional empty states for a new library.
+- Discover supports client-side search and genre filtering.
+- Library separates favorites, reading history, continue reading, and bookmarks with empty states.
+- Publisher desk includes add-novel metadata, manuscript, cover/PDF placeholders, and chapter management surfaces.
+- Settings includes day/night theme selection, font sizing, text spacing, reading toggles, and account placeholders.
+- Novel detail and chapter reader views are wired for the sample story and ready for manually added content.
 
 ## User preferences
 
