@@ -52,6 +52,7 @@ import {
   useParams,
 } from 'wouter';
 
+// Single shared React Query client for the Babel app.
 const queryClient = new QueryClient();
 
 type Theme = 'light' | 'dark';
