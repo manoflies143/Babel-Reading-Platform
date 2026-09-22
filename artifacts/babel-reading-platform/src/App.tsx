@@ -1062,6 +1062,9 @@ function ProfilePage() {
   };
   const deleteAccount = () => {
     if (!window.confirm('Delete this local prototype account from this device?')) return;
+    // Remove this device's credential and session. Keep the registration counter
+    // untouched so a founding-reader slot can never be reused.
+    localStorage.removeItem('babel-credential');
     setAccount(null);
     setProfile(defaultProfile);
     setLocation('/auth');
