@@ -912,6 +912,7 @@ function AuthPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AccountRole>('reader');
+  const [password, setPassword] = useState('');
   const [notice, setNotice] = useState('');
 
   if (account) {
