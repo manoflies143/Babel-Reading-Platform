@@ -1,5 +1,4 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -51,9 +50,6 @@ import {
   useLocation,
   useParams,
 } from 'wouter';
-
-// Single shared React Query client for the Babel app.
-const queryClient = new QueryClient();
 
 type Theme = 'light' | 'dark';
 type Genre = 'Fantasy' | 'Literary' | 'Romance' | 'Mystery' | 'Science fiction' | 'Action' | 'Horror' | 'Drama' | 'Comedy' | 'Adventure';
@@ -1249,7 +1245,6 @@ function App() {
     toggleBookmark,
   };
   return (
-    <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BabelContext.Provider value={contextValue}>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
@@ -1259,7 +1254,6 @@ function App() {
            {achievementNotice && <div className="fixed bottom-5 right-5 z-[60] flex max-w-sm items-start gap-3 rounded-2xl border border-accent/30 bg-card p-4 shadow-[var(--shadow-card)]" role="status"><BadgeMark title={achievementNotice.name} group={achievementNotice.group} /><div className="min-w-0 flex-1"><p className="font-mono-ui text-[10px] uppercase tracking-[.14em] text-accent">Achievement unlocked</p><p className="mt-1 font-display text-lg">{achievementNotice.name}</p><p className="mt-1 text-xs text-muted-foreground">{achievementNotice.description}</p></div><button onClick={() => setAchievementNotice(null)} className="rounded-lg p-1 text-muted-foreground hover:bg-muted" aria-label="Dismiss achievement notification"><X size={14} /></button></div>}
         </BabelContext.Provider>
       </TooltipProvider>
-    </QueryClientProvider>
   );
 }
 
