@@ -170,3 +170,88 @@
 .reading-rule { line-height: 1.72; letter-spacing: .01em; }
 .reading-rule.spacious { line-height: 2.08; letter-spacing: .035em; }
 .reading-rule.compact { line-height: 1.48; letter-spacing: 0; }
+
+/* Babel x Crunchyroll x Webtoon visual layer */
+.badge-mark {
+  position: relative;
+  display: flex;
+  height: 76px;
+  width: 76px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.badge-mark::before {
+  content: '';
+  position: absolute;
+  inset: -35%;
+  background: conic-gradient(from 210deg, transparent 0 35%, hsl(var(--accent) / .22), transparent 55% 100%);
+  opacity: .75;
+}
+.badge-mark-ring {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 42px;
+  width: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid hsl(var(--accent) / .42);
+  color: hsl(var(--accent));
+  background: hsl(var(--background) / .7);
+}
+.badge-mark-label {
+  position: relative;
+  z-index: 1;
+  max-width: 68px;
+  overflow: hidden;
+  font-family: var(--app-font-mono);
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  color: hsl(var(--accent));
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.badge-mark-earned { border-color: hsl(var(--accent) / .28); background: hsl(var(--accent) / .07); }
+.badge-mark-featured {
+  border-color: hsl(var(--accent) / .75);
+  background: linear-gradient(145deg, hsl(var(--accent) / .96), hsl(var(--accent) / .7));
+  box-shadow: 0 12px 30px hsl(var(--accent) / .22), inset 0 1px 0 rgba(255,255,255,.22);
+  transform: translateY(-1px);
+}
+.badge-mark-featured .badge-mark-ring { color: hsl(var(--accent-foreground)); border-color: hsl(var(--accent-foreground) / .4); background: hsl(var(--background) / .14); }
+.badge-mark-featured .badge-mark-label { color: hsl(var(--accent-foreground)); }
+.badge-mark-special { border-radius: 24px; }
+.badge-mark-special .badge-mark-ring { height: 44px; width: 44px; box-shadow: 0 0 0 4px hsl(var(--accent) / .07); }
+.badge-mark-locked { filter: grayscale(.9); opacity: .55; }
+.badge-featured-panel { position: relative; overflow: hidden; }
+.badge-featured-panel::after {
+  content: '';
+  position: absolute;
+  right: -70px;
+  top: -80px;
+  height: 180px;
+  width: 180px;
+  border: 1px solid hsl(var(--accent) / .16);
+  border-radius: 999px;
+  box-shadow: 0 0 0 28px hsl(var(--accent) / .04), 0 0 0 56px hsl(var(--accent) / .025);
+  pointer-events: none;
+}
+.badge-collection-header { border-left: 2px solid hsl(var(--accent)); padding-left: 14px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .badge-mark:hover { transform: translateY(-2px); }
+  .badge-mark-featured:hover { transform: translateY(-4px) scale(1.02); }
+}
