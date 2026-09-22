@@ -78,12 +78,19 @@ type Novel = {
   chapters: { id: number; title: string; minutes: number; published: boolean; text?: string }[];
 };
 
+type ServerBadgeEntitlements = {
+  creator?: boolean;
+  foundingReaderNumber?: number;
+};
+
 type Account = {
   name: string;
   email: string;
   role: AccountRole;
   createdAt: string;
   emailVerified?: boolean;
+  // Backend-authoritative badge data. The frontend must never calculate or accept these values from user input.
+  serverBadgeEntitlements?: ServerBadgeEntitlements;
 };
 
 type ReadingRecord = {
@@ -212,7 +219,24 @@ const achievementDefinitions: AchievementDefinition[] = [
   { id: 'personal-library', name: 'Personal Library', description: 'Save 25 favorites.', group: 'Library', target: 25, metric: 'favorites' },
   { id: 'full-shelves', name: 'Full Shelves', description: 'Save 50 favorites.', group: 'Library', target: 50, metric: 'favorites' },
   { id: 'the-first-book', name: 'The First Book', description: 'Open a story in Babel.', group: 'Special', target: 1, metric: 'special' },
+  { id: 'creator', name: 'The First Tower', description: 'Official Babel creator badge.', group: 'Special', target: 1, metric: 'special' },
+  { id: 'founding-reader', name: 'Founding Reader', description: 'Awarded to the first 10 registered Babel readers.', group: 'Special', target: 1, metric: 'special' },
 ];
+
+const SERVER_BADGE_IDS = {
+  creator: 'creator',
+  foundingReader: 'founding-reader',
+} as const;
+
+function getServerBadgeStatus(account: Account | null) {
+  const entitlements = account?.serverBadgeEntitlements;
+  const foundingNumber = entitlements?.foundingReaderNumber;
+  return {
+    creator: entitlements?.creator === true,
+    foundingReader: typeof foundingNumber === 'number' && foundingNumber >= 1 && foundingNumber <= 10,
+    foundingReaderNumber: foundingNumber,
+  };
+}
 
 type ReadingStats = {
   chaptersOpened: number;
@@ -980,7 +1004,9 @@ function ProfilePage() {
   const progressFor = (definition: AchievementDefinition) => achievementProgress(definition, stats);
   const earned = achievementDefinitions.filter((definition) => progressFor(definition) >= definition.target);
   const featured = earned.find((definition) => definition.id === profile.featuredBadge) ?? earned[0];
-  const creatorBadge = account?.email.toLowerCase() === 'manoflies143@gmail.com' && account.emailVerified === true;
+  const serverBadges = getServerBadgeStatus(account);
+  const creatorBadge = serverBadges.creator;
+  const foundingReaderBadge = serverBadges.foundingReader;
   const handleAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -1016,7 +1042,7 @@ function ProfilePage() {
           <div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-xl">Your account</h3><div className="mt-5 space-y-2"><Link href="/library" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open my library <ArrowRight size={14} /></Link>{account.role === 'publisher' && <Link href="/publisher" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open publisher desk <ArrowRight size={14} /></Link>}<Link href="/settings" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Reading settings <ArrowRight size={14} /></Link></div></div>
           <div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-xl">Privacy</h3><div className="mt-4 space-y-3"><label className="flex items-center justify-between gap-3 text-xs"><span>Profile public</span><input type="checkbox" checked={profile.profilePublic} onChange={(event) => setProfile({ ...profile, profilePublic: event.target.checked })} /></label><label className="flex items-center justify-between gap-3 text-xs"><span>Stats public</span><input type="checkbox" checked={profile.statsPublic} onChange={(event) => setProfile({ ...profile, statsPublic: event.target.checked })} /></label><label className="flex items-center justify-between gap-3 text-xs"><span>Achievements public</span><input type="checkbox" checked={profile.achievementsPublic} onChange={(event) => setProfile({ ...profile, achievementsPublic: event.target.checked })} /></label><p className="pt-2 text-[11px] leading-5 text-muted-foreground">Sharing uses only the information you choose to share.</p></div></div>
           {creatorBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="The First Tower" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Creator badge</p><p className="mt-2 font-display text-xl">The First Tower</p><p className="mt-1 text-xs text-muted-foreground">Reserved for the securely verified Babel creator identity.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Creator badge</p><p className="mt-3 text-xs leading-5 text-muted-foreground">Reserved for a securely verified creator identity. External authentication configuration is required.</p></div>}
-          <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Founding reader badges</p><p className="mt-3 text-xs leading-5 text-muted-foreground">First-10 reader assignment requires server-side account creation order. It is not claimable from this local prototype.</p></div>
+          {foundingReaderBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="Founding Reader" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Founding reader badge</p><p className="mt-2 font-display text-xl">Founding Reader #{serverBadges.foundingReaderNumber}</p><p className="mt-1 text-xs text-muted-foreground">Assigned by Babel when your account was among the first 10 registered readers.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Founding reader badges</p><p className="mt-3 text-xs leading-5 text-muted-foreground">The first 10 reader numbers will be assigned by the account service at registration and cannot be claimed or changed from the client.</p></div>}
           <button onClick={deleteAccount} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs text-muted-foreground hover:bg-muted hover:text-destructive" data-testid="button-delete-account"><Trash2 size={14} /> Delete local account</button>
           <button onClick={() => { setAccount(null); setLocation('/'); }} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground" data-testid="button-logout"><LogOut size={15} /> Log out</button>
         </aside>
@@ -1141,7 +1167,16 @@ function App() {
     saveStored('babel-profile', next);
   };
   const activityStats = getReadingStats(activity, favorites, bookmarks, [featuredNovel]);
-  const earnedAchievementIds = achievementDefinitions.filter((definition) => achievementProgress(definition, activityStats) >= definition.target).map((definition) => definition.id);
+  const serverBadges = getServerBadgeStatus(account);
+  const locallyEarnedAchievementIds = achievementDefinitions
+    .filter((definition) => !['creator', 'founding-reader'].includes(definition.id))
+    .filter((definition) => achievementProgress(definition, activityStats) >= definition.target)
+    .map((definition) => definition.id);
+  const serverEarnedBadgeIds = [
+    ...(serverBadges.creator ? [SERVER_BADGE_IDS.creator] : []),
+    ...(serverBadges.foundingReader ? [SERVER_BADGE_IDS.foundingReader] : []),
+  ];
+  const earnedAchievementIds = [...locallyEarnedAchievementIds, ...serverEarnedBadgeIds];
   useEffect(() => {
     const known = loadStored<string[]>('babel-earned-achievements', []);
     const newlyEarned = earnedAchievementIds.find((id) => !known.includes(id));
