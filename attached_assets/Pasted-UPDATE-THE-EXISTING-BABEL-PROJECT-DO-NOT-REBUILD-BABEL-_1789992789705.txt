@@ -1,0 +1,909 @@
+UPDATE THE EXISTING BABEL PROJECT.
+
+DO NOT REBUILD BABEL FROM SCRATCH.
+
+DO NOT REMOVE WORKING FEATURES.
+
+DO NOT REDESIGN UNRELATED SCREENS.
+
+FIRST AUDIT THE ACTUAL CODE, THEN FIX EXISTING PROBLEMS, THEN ADD THE FEATURES BELOW.
+
+Before changing anything:
+
+1. Inspect the entire existing Babel implementation.
+2. Find unfinished features.
+3. Find broken features.
+4. Find duplicated code.
+5. Find conflicting navigation/gesture logic.
+6. Find fake or hardcoded data that should use real data.
+7. Find features previously marked complete that do not actually work.
+8. Check console/runtime errors.
+9. Check database/state management.
+10. Check authentication/security.
+11. Check responsive behavior.
+
+FIRST give a SHORT list:
+
+PROBLEMS FOUND:
+
+* ...
+
+Then fix the problems.
+
+Do not claim something works unless it has actually been tested.
+
+==================================================
+
+1. MAIN INTERFACE SWIPE NAVIGATION
+   ==================================================
+
+Main sections:
+
+HOME ↔ DISCOVER ↔ LIBRARY ↔ PROFILE
+
+Swipe LEFT:
+
+* Next section.
+
+Swipe RIGHT:
+
+* Previous section.
+
+Test both directions.
+
+Keep sidebar/buttons working.
+
+IMPORTANT:
+
+This is MAIN INTERFACE navigation.
+
+It is NOT reader swipe navigation.
+
+Do not mix the two.
+
+Main interface swipe must NOT activate while:
+
+* Reading
+* Vertically scrolling
+* Typing
+* Searching
+* Selecting text
+* Editing chapters
+* Using Publisher Dashboard
+* Using Settings
+* Filling forms
+* Pressing buttons
+* Interacting with controls
+
+Verify and FIX all three modes.
+
+SWIPE/PAGE:
+
+* Swipe LEFT = next
+* Swipe RIGHT = previous
+
+TAP:
+
+* Tap right = next
+* Tap left = previous
+
+CONTINUOUS/VERTICAL:
+
+FIX the current problem where the reader requires manual Next Chapter.
+
+It must automatically continue:
+
+Chapter 1
+↓
+Chapter 2
+↓
+Chapter 3
+↓
+Chapter 4
+
+When the reader reaches the end of a chapter, automatically load/append the next chapter.
+
+No manual Next Chapter should be required.
+
+Test at least 3 consecutive chapters.
+
+The reader mode selected in Settings must actually control the reader.
+
+Reader gestures must NEVER trigger main interface navigation.
+
+Use REAL data for:
+
+* Current chapter
+* Reading progress
+* Reading history
+* Completed chapters
+* Continue Reading
+* Favorites
+* Bookmarks
+
+Progress must persist after leaving and returning.
+
+Do not use fake statistics.
+
+Verify/fix:
+
+* Email registration
+* Email/password login
+* Logout
+* Password reset
+* Email verification
+* Account deletion
+* Reader account
+* Publisher account
+
+During registration allow:
+
+READER
+
+or
+
+PUBLISHER
+
+Prepare secure:
+
+* Google sign-in
+* Facebook sign-in
+* Google account linking
+* Facebook account linking
+
+Never store Google/Facebook passwords.
+
+Do not create fake authentication.
+
+If external OAuth configuration is required, clearly report it.
+
+Track REAL reading activity.
+
+A reading day can count when the reader:
+
+* Reads approximately 5 minutes of active reading
+
+OR
+
+* Completes a chapter.
+
+Track:
+
+* Current streak
+* Longest streak
+* Reading days
+
+No coins.
+
+No paid streak protection.
+
+Track:
+
+* Chapters opened
+* Chapters completed
+* Novels completed
+* Active reading time
+* Reading sessions
+* Average session length
+* Daily reading time
+* Weekly reading time
+* Monthly reading time
+* All-time reading time
+* Current streak
+* Longest streak
+* Reading calendar
+* Reading progress
+* Achievements
+
+Only count actual reading activity.
+
+Create a real achievement system based on stored reading data.
+
+READING:
+
+* First Page
+* Bookworm — 10 chapters
+* Avid Reader — 50 chapters
+* Dedicated Reader — 100 chapters
+* Library Regular — 250 chapters
+* Master Reader — 500 chapters
+* Archivist — 1,000 chapters
+* Legend of the Library — 5,000 chapters
+
+NOVEL COMPLETION:
+
+* First Finish — 1 novel
+* Series Finisher — 5 novels
+* Book Collector — 10 novels
+* Library Builder — 25 novels
+* Master of Stories — 50 novels
+* Legendary Reader — 100 novels
+
+STREAKS:
+
+* Spark — 3 days
+* Steady Flame — 7 days
+* Burning Page — 14 days
+* Unstoppable — 30 days
+* Eternal Flame — 60 days
+* Century Reader — 100 days
+* Library Legend — 365 days
+
+READING TIME:
+
+* First Hour — 1 hour
+* Night at the Library — 5 hours
+* Dedicated Scholar — 10 hours
+* Deep Reader — 25 hours
+* Master of Pages — 50 hours
+* Library Guardian — 100 hours
+
+EXPLORATION:
+
+* Wide Reader — 3 genres
+* World Explorer — 5 genres
+* Genre Hunter — 10 genres
+* Story Explorer — 25 tags
+
+BOOKMARKS:
+
+* First Mark — 1 bookmark
+* Page Keeper — 10 bookmarks
+* Archivist's Notes — 50 bookmarks
+* Library Archivist — 100 bookmarks
+
+FAVORITES:
+
+* First Favorite — 1 favorite
+* Growing Library — 10 favorites
+* Personal Library — 25 favorites
+* Full Shelves — 50 favorites
+
+SPECIAL BABEL ACHIEVEMENTS:
+
+Create additional unique Babel-themed achievements where appropriate.
+
+Examples:
+
+* The First Book
+* The Opening Door
+* The Seeker
+* The Archivist
+* The Story Collector
+* The Returning Reader
+
+Achievements must be based on real activity.
+
+Every achievement should have a custom Babel badge.
+
+Create visually distinctive badge designs.
+
+Possible visual themes:
+
+* Ancient books
+* Open books
+* Library architecture
+* Babel tower/library symbol
+* Bookmark
+* Flame
+* Crown
+* Star
+* Key
+* Quill
+* Moon
+* Crystal
+
+Badges should feel unique to Babel.
+
+Use tasteful animation/effects where appropriate.
+
+Do not make the interface overly flashy.
+
+Badges must look good in:
+
+* Dark mode
+* Light mode
+* Phone
+* iPad/tablet
+* Desktop
+
+Add an ACHIEVEMENTS section to the user's profile.
+
+Profile should show:
+
+* Profile picture
+* Username
+* Featured badge
+* Current streak
+* Longest streak
+* Chapters completed
+* Novels completed
+* Other statistics allowed by privacy settings
+
+Add:
+
+VIEW ALL ACHIEVEMENTS
+
+Show:
+
+* Earned badges
+* Locked badges
+* Progress toward achievements
+
+Group achievements into:
+
+* Reading
+* Streaks
+* Completion
+* Time
+* Exploration
+* Library
+* Special
+
+Allow the user to select ONE earned badge as their featured profile badge.
+
+The user can change their featured badge at any time.
+
+Only earned badges can be selected.
+
+Locked badges cannot be selected.
+
+The selected badge must persist after logout/login.
+
+Allow users to:
+
+* Upload profile picture
+* Change profile picture
+* Remove profile picture
+
+Provide a default Babel avatar if no image exists.
+
+Validate uploaded images appropriately.
+
+Respect profile privacy settings.
+
+Show real progress.
+
+Example:
+
+AVID READER
+
+37 / 50 chapters
+
+[Progress bar]
+
+MASTER READER
+
+37 / 500 chapters
+
+[Progress bar]
+
+Do not show fake progress.
+
+When an achievement is earned:
+
+Show a small notification:
+
+ACHIEVEMENT UNLOCKED
+
+"Steady Flame"
+
+7-day reading streak.
+
+Allow it to be dismissed.
+
+Do not interrupt reading unnecessarily.
+
+Create ONE extremely special custom badge for the creator/founder of Babel.
+
+The creator badge must be assigned ONLY to this exact verified account email:
+
+[manoflies143@gmail.com](mailto:manoflies143@gmail.com)
+
+The creator badge should be visually distinct from every normal achievement badge.
+
+Make it feel like the rarest/special badge in Babel.
+
+Create:
+
+* Custom badge artwork/design
+* Custom badge name
+* Custom description
+* Special profile presentation
+* Optional subtle animation/effect
+
+The design should feel prestigious and unique to the Babel identity.
+
+IMPORTANT SECURITY REQUIREMENTS:
+
+Do NOT allow normal users to manually select or claim the creator badge.
+
+Do NOT assign it based only on a username.
+
+Do NOT allow another account to claim it simply by entering the email.
+
+The badge must be tied to the authenticated account identity.
+
+If the authentication system cannot securely verify the email, report that external configuration is required instead of falsely assigning the badge.
+
+The creator badge should appear automatically when the verified creator account logs in.
+
+Create a special limited badge series for the FIRST 10 READER ACCOUNTS created on Babel.
+
+These are not normal achievements.
+
+They are special founding-reader badges.
+
+The system must determine the first 10 reader accounts based on the actual account creation timestamp/order stored in the database.
+
+Do NOT rely on usernames.
+
+Do NOT rely on email addresses.
+
+Do NOT allow users to manually claim these badges.
+
+Only the first 10 accounts whose account type is READER should qualify.
+
+Each of the first 10 reader accounts receives a unique badge.
+
+Example structure:
+
+Reader #1 — custom badge/name
+Reader #2 — custom badge/name
+Reader #3 — custom badge/name
+Reader #4 — custom badge/name
+Reader #5 — custom badge/name
+Reader #6 — custom badge/name
+Reader #7 — custom badge/name
+Reader #8 — custom badge/name
+Reader #9 — custom badge/name
+Reader #10 — custom badge/name
+
+Create unique Babel-themed names and designs for all 10.
+
+Examples of possible themes:
+
+* First Light
+* First Page
+* Dawn Reader
+* Founding Reader
+* Early Archivist
+* First Seeker
+* Library Pioneer
+* Babel Pathfinder
+* Original Reader
+* First Circle
+
+You may create better names/designs that fit Babel.
+
+These badges should be:
+
+* Rare
+* Unique
+* Permanently associated with the qualifying account
+* Displayable on the profile
+* Shareable
+
+Do not allow these badges to be transferred between accounts.
+
+If an account is deleted, do not automatically give its founding badge to a later account.
+
+The first-10 system must remain historically accurate.
+
+Create a badge collection.
+
+Show:
+
+* Earned badges
+* Locked badges
+* Creator badge if applicable
+* Founding reader badge if applicable
+* Achievement badges
+
+Organize badges clearly.
+
+Allow users to select an earned badge as their featured badge.
+
+Expand the sharing system.
+
+Users should be able to share:
+
+* Achievements
+* Streaks
+* Featured badge
+* Earned badges
+* Founding reader badge
+* Reading milestones where privacy settings allow
+
+Example share card:
+
+---
+
+BABEL
+
+🔥 30 Day Reading Streak
+
+Achievement:
+UNSTOPPABLE
+
+[Badge]
+
+## "30 days of reading"
+
+Another example:
+
+---
+
+BABEL
+
+Achievement Unlocked
+
+MASTER READER
+
+500 Chapters Completed
+
+## [Custom Badge]
+
+Another:
+
+---
+
+BABEL
+
+Featured Badge
+
+LIBRARY PIONEER
+
+Founding Reader #7
+
+## [Badge]
+
+Allow:
+
+* Native device sharing
+* Copy share link
+* Supported social sharing
+* Facebook sharing where supported
+
+Generated share links/cards must NOT expose:
+
+* Private reading history
+* Private statistics
+* Private novels
+* Private account information
+
+Only share information the user has chosen to share.
+
+Respect profile privacy settings.
+
+Add personalized recommendations.
+
+Use actual reader behavior:
+
+* Genres
+* Tags
+* Reading history
+* Frequently read novels
+* Completed novels
+* Reading behavior
+
+Example:
+
+If a reader mostly reads:
+
+Fantasy + Action + Adventure
+
+recommend more novels matching those interests.
+
+Create:
+
+RECOMMENDED FOR YOU
+
+Do not rely only on popularity.
+
+New users with insufficient history should receive:
+
+* General discovery
+* New releases
+* Popular content
+
+Respect Incognito Mode and privacy.
+
+When publishers create/edit novels, allow controlled GENRES.
+
+Examples:
+
+* Fantasy
+* Romance
+* Action
+* Mystery
+* Horror
+* Sci-Fi
+* Drama
+* Comedy
+* Adventure
+
+Allow multiple genres.
+
+Do not allow unlimited duplicate genre names.
+
+Allow specific TAGS.
+
+Examples:
+
+* Magic
+* Academy
+* Reincarnation
+* Time Travel
+* Supernatural
+
+Genres and tags must be separate.
+
+Make them available to:
+
+* Search
+* Discover
+* Filtering
+* Recommendations
+* Novel pages
+
+Add:
+
+POPULAR THIS WEEK
+
+Use REAL reading activity.
+
+Do NOT hardcode rankings.
+
+Use measurable activity such as:
+
+* Unique readers
+* Chapters opened
+* Chapters completed
+* Reading sessions
+* Active reading time
+
+Use a consistent scoring system.
+
+The ranking must automatically update as new reading activity occurs.
+
+Add:
+
+POPULAR ALL TIME
+
+Use accumulated lifetime reading activity.
+
+Do NOT hardcode rankings.
+
+New novels should automatically become eligible once real readers begin reading them.
+
+No developer should manually update popularity.
+
+Prevent duplicate reading events from artificially inflating popularity.
+
+Refreshing/reopening the same chapter should NOT repeatedly count as a new meaningful reading event.
+
+Use real stored activity.
+
+Verify/fix:
+
+* Create novel
+* Edit novel
+* Genres
+* Tags
+* Add chapter
+* Edit chapter
+* Preview
+* Save draft
+* Publish
+* PDF import
+* Copy/paste editing
+
+Do not break existing publisher tools.
+
+Publisher accounts are planned to eventually use a monthly paid subscription.
+
+DO NOT IMPLEMENT PAYMENTS YET.
+
+Use:
+
+COMING SOON
+
+or an appropriate placeholder.
+
+Do not create fake payment processing.
+
+Verify/fix sharing for:
+
+* Novels
+* Chapters where appropriate
+* Copy links
+* Native sharing
+* Facebook sharing where supported
+* Achievements
+* Streaks
+* Badges
+* Featured badge
+* Founding reader badges
+
+Respect privacy settings.
+
+Do not expose private:
+
+* Reading history
+* Incognito activity
+* Statistics
+* Current reading
+* Achievements
+* Streaks
+* Favorites
+* Badges
+
+unless the user has chosen to make them public.
+
+Preserve:
+
+BABEL minimalist identity.
+
+Dark theme:
+
+Orange + Black
+
+Light theme:
+
+Blue + White
+
+Theme controls remain inside:
+
+SETTINGS
+
+Do NOT add a light/dark shortcut to the main interface.
+
+New features must visually match Babel.
+
+Do not redesign unrelated screens.
+
+Actually test:
+
+MAIN NAVIGATION:
+
+1. Home → Discover
+2. Discover → Library
+3. Library → Profile
+4. Reverse navigation
+
+READER:
+5. Swipe mode
+6. Tap mode
+7. Continuous mode
+8. Chapter 1 → 2 automatically
+9. Chapter 2 → 3 automatically
+10. Reading progress
+11. History
+12. Continue Reading
+13. Completed chapters
+
+ACCOUNTS:
+14. Registration
+15. Login
+16. Logout
+17. Password reset
+18. Email verification
+19. Reader account
+20. Publisher account
+
+STATS:
+21. Reading time
+22. Sessions
+23. Streak
+24. Longest streak
+25. Achievements
+26. Achievement progress
+27. Reading calendar
+
+PROFILE:
+28. Change profile picture
+29. Remove profile picture
+30. Select earned badge
+31. Change featured badge
+32. Try selecting locked badge
+33. Confirm locked badge cannot be selected
+34. Log out/in
+35. Confirm badge persists
+
+CREATOR BADGE:
+36. Verify creator account identity
+37. Confirm creator badge appears ONLY for [manoflies143@gmail.com](mailto:manoflies143@gmail.com)
+38. Confirm normal accounts cannot claim it
+39. Confirm another account cannot obtain it by changing its username/email display value
+
+FIRST 10 READER BADGES:
+40. Create test reader accounts
+41. Verify the first 10 reader accounts receive badges
+42. Verify each receives the correct unique badge
+43. Verify account #11 does NOT receive a founding-reader badge
+44. Verify badges persist after logout/login
+45. Verify badges cannot be manually claimed
+46. Verify deleting a founding account does not transfer its badge to a later account
+
+SHARING:
+47. Share achievement
+48. Share streak
+49. Share featured badge
+50. Share normal achievement badge
+51. Share founding-reader badge
+52. Copy share link
+53. Native device sharing
+54. Verify private information is not exposed
+
+PUBLISHER:
+55. Create novel
+56. Edit novel
+57. Select genres
+58. Add tags
+59. Add chapter
+60. Edit chapter
+61. Draft
+62. Preview
+63. Publish
+
+DISCOVERY:
+64. Search
+65. Genre filtering
+66. Tags
+67. Recommended for You
+68. Popular This Week
+69. Popular All Time
+70. New novel appears correctly
+
+POPULARITY:
+71. Add Novel A
+72. Confirm no fake popularity
+73. Read Novel A
+74. Verify activity
+75. Add Novel B
+76. Read Novel B
+77. Verify ranking can update
+78. Verify lifetime ranking
+79. Verify duplicate events do not inflate results
+
+DEVICES:
+80. Phone
+81. iPad/tablet
+82. Desktop
+
+After the audit, fixes, implementation, and testing, respond ONLY with:
+
+PROBLEMS FOUND:
+
+* ...
+
+FIXED:
+
+* ...
+
+ADDED:
+
+* ...
+
+EXTERNAL CONFIGURATION REQUIRED:
+
+* ...
+
+UNVERIFIED:
+
+* ...
+
+Do not claim something works unless it was actually tested.
+
+DO NOT REBUILD BABEL.
+
+DO NOT REMOVE WORKING FEATURES.
+
+Verify DO NOT MODIFY UNRELATED CODE.
+
+DO NOT USE FAKE DATA WHERE REAL DATA IS REQUIRED.
+
+DO NOT HARD-CODE POPULARITY.
+
+DO NOT CREATE FAKE AUTHENTICATION.

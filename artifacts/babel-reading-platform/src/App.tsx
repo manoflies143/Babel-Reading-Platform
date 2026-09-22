@@ -21,6 +21,7 @@ import {
   FilePlus2,
   Heart,
   Home,
+  Key,
   LayoutDashboard,
   LogIn,
   LogOut,
@@ -54,7 +55,7 @@ import {
 const queryClient = new QueryClient();
 
 type Theme = 'light' | 'dark';
-type Genre = 'Fantasy' | 'Literary' | 'Romance' | 'Mystery' | 'Science fiction';
+type Genre = 'Fantasy' | 'Literary' | 'Romance' | 'Mystery' | 'Science fiction' | 'Action' | 'Horror' | 'Drama' | 'Comedy' | 'Adventure';
 type AccountRole = 'reader' | 'publisher';
 type ReadingMode = 'Vertical Scroll' | 'Continuous Reading' | 'Swipe/Page Mode' | 'Tap Navigation';
 type FontSize = 'Small' | 'Medium' | 'Large' | 'Extra large';
@@ -62,6 +63,8 @@ type FontFamily = 'Fraunces' | 'DM Sans' | 'Georgia' | 'System';
 type LineSpacing = 'Compact' | 'Comfortable' | 'Spacious';
 type TextWidth = 'Narrow' | 'Comfortable' | 'Wide';
 type ParagraphSpacing = 'Tight' | 'Comfortable' | 'Generous';
+type AccentColor = 'Babel Blue' | 'Babel Orange' | 'Lavender' | 'Sage' | 'Rose';
+type AchievementGroup = 'Reading' | 'Streaks' | 'Completion' | 'Time' | 'Exploration' | 'Library' | 'Special';
 
 type Novel = {
   id: string;
@@ -69,7 +72,10 @@ type Novel = {
   author: string;
   description: string;
   genres: Genre[];
-  chapters: { id: number; title: string; minutes: number; published: boolean }[];
+  tags: string[];
+  language?: string;
+  status?: 'Ongoing' | 'Completed';
+  chapters: { id: number; title: string; minutes: number; published: boolean; text?: string }[];
 };
 
 type Account = {
@@ -77,6 +83,7 @@ type Account = {
   email: string;
   role: AccountRole;
   createdAt: string;
+  emailVerified?: boolean;
 };
 
 type ReadingRecord = {
@@ -97,6 +104,34 @@ type ReadingPreferences = {
   lineSpacing: LineSpacing;
   textWidth: TextWidth;
   paragraphSpacing: ParagraphSpacing;
+  accentColor: AccentColor;
+};
+
+type ReadingActivity = {
+  id: string;
+  novelId: string;
+  chapterId: number;
+  startedAt: string;
+  durationSeconds: number;
+  completedChapter: boolean;
+  completedNovel: boolean;
+};
+
+type ProfileSettings = {
+  avatar: string | null;
+  featuredBadge: string | null;
+  profilePublic: boolean;
+  statsPublic: boolean;
+  achievementsPublic: boolean;
+};
+
+type AchievementDefinition = {
+  id: string;
+  name: string;
+  description: string;
+  group: AchievementGroup;
+  target: number;
+  metric: 'chaptersOpened' | 'chaptersCompleted' | 'novelsCompleted' | 'streak' | 'readingSeconds' | 'genres' | 'tags' | 'bookmarks' | 'favorites' | 'special';
 };
 
 type BabelContextValue = {
@@ -107,6 +142,10 @@ type BabelContextValue = {
   bookmarks: string[];
   preferences: ReadingPreferences;
   setPreferences: (preferences: ReadingPreferences) => void;
+  activity: ReadingActivity[];
+  recordReadingSession: (session: Omit<ReadingActivity, 'id'>) => void;
+  profile: ProfileSettings;
+  setProfile: (profile: ProfileSettings) => void;
   updateHistory: (record: ReadingRecord) => void;
   removeHistory: (novelId: string) => void;
   clearHistory: () => void;
@@ -121,7 +160,127 @@ const defaultPreferences: ReadingPreferences = {
   lineSpacing: 'Comfortable',
   textWidth: 'Comfortable',
   paragraphSpacing: 'Comfortable',
+  accentColor: 'Babel Orange',
 };
+
+const defaultProfile: ProfileSettings = {
+  avatar: null,
+  featuredBadge: null,
+  profilePublic: false,
+  statsPublic: false,
+  achievementsPublic: false,
+};
+
+const achievementDefinitions: AchievementDefinition[] = [
+  { id: 'first-page', name: 'First Page', description: 'Open your first chapter.', group: 'Reading', target: 1, metric: 'chaptersOpened' },
+  { id: 'bookworm', name: 'Bookworm', description: 'Open 10 chapters.', group: 'Reading', target: 10, metric: 'chaptersOpened' },
+  { id: 'avid-reader', name: 'Avid Reader', description: 'Complete 50 chapters.', group: 'Reading', target: 50, metric: 'chaptersCompleted' },
+  { id: 'dedicated-reader', name: 'Dedicated Reader', description: 'Complete 100 chapters.', group: 'Reading', target: 100, metric: 'chaptersCompleted' },
+  { id: 'library-regular', name: 'Library Regular', description: 'Complete 250 chapters.', group: 'Reading', target: 250, metric: 'chaptersCompleted' },
+  { id: 'master-reader', name: 'Master Reader', description: 'Complete 500 chapters.', group: 'Reading', target: 500, metric: 'chaptersCompleted' },
+  { id: 'archivist', name: 'Archivist', description: 'Complete 1,000 chapters.', group: 'Reading', target: 1000, metric: 'chaptersCompleted' },
+  { id: 'legend-of-the-library', name: 'Legend of the Library', description: 'Complete 5,000 chapters.', group: 'Reading', target: 5000, metric: 'chaptersCompleted' },
+  { id: 'first-finish', name: 'First Finish', description: 'Complete one novel.', group: 'Completion', target: 1, metric: 'novelsCompleted' },
+  { id: 'series-finisher', name: 'Series Finisher', description: 'Complete 5 novels.', group: 'Completion', target: 5, metric: 'novelsCompleted' },
+  { id: 'book-collector', name: 'Book Collector', description: 'Complete 10 novels.', group: 'Completion', target: 10, metric: 'novelsCompleted' },
+  { id: 'library-builder', name: 'Library Builder', description: 'Complete 25 novels.', group: 'Completion', target: 25, metric: 'novelsCompleted' },
+  { id: 'master-of-stories', name: 'Master of Stories', description: 'Complete 50 novels.', group: 'Completion', target: 50, metric: 'novelsCompleted' },
+  { id: 'legendary-reader', name: 'Legendary Reader', description: 'Complete 100 novels.', group: 'Completion', target: 100, metric: 'novelsCompleted' },
+  { id: 'spark', name: 'Spark', description: 'Read on 3 days.', group: 'Streaks', target: 3, metric: 'streak' },
+  { id: 'steady-flame', name: 'Steady Flame', description: 'Read on 7 consecutive days.', group: 'Streaks', target: 7, metric: 'streak' },
+  { id: 'burning-page', name: 'Burning Page', description: 'Read on 14 consecutive days.', group: 'Streaks', target: 14, metric: 'streak' },
+  { id: 'unstoppable', name: 'Unstoppable', description: 'Read on 30 consecutive days.', group: 'Streaks', target: 30, metric: 'streak' },
+  { id: 'eternal-flame', name: 'Eternal Flame', description: 'Read on 60 consecutive days.', group: 'Streaks', target: 60, metric: 'streak' },
+  { id: 'century-reader', name: 'Century Reader', description: 'Read on 100 consecutive days.', group: 'Streaks', target: 100, metric: 'streak' },
+  { id: 'library-legend', name: 'Library Legend', description: 'Read on 365 consecutive days.', group: 'Streaks', target: 365, metric: 'streak' },
+  { id: 'first-hour', name: 'First Hour', description: 'Read for one hour.', group: 'Time', target: 3600, metric: 'readingSeconds' },
+  { id: 'night-at-the-library', name: 'Night at the Library', description: 'Read for five hours.', group: 'Time', target: 18000, metric: 'readingSeconds' },
+  { id: 'dedicated-scholar', name: 'Dedicated Scholar', description: 'Read for ten hours.', group: 'Time', target: 36000, metric: 'readingSeconds' },
+  { id: 'deep-reader', name: 'Deep Reader', description: 'Read for twenty-five hours.', group: 'Time', target: 90000, metric: 'readingSeconds' },
+  { id: 'master-of-pages', name: 'Master of Pages', description: 'Read for fifty hours.', group: 'Time', target: 180000, metric: 'readingSeconds' },
+  { id: 'library-guardian', name: 'Library Guardian', description: 'Read for one hundred hours.', group: 'Time', target: 360000, metric: 'readingSeconds' },
+  { id: 'wide-reader', name: 'Wide Reader', description: 'Read across 3 genres.', group: 'Exploration', target: 3, metric: 'genres' },
+  { id: 'world-explorer', name: 'World Explorer', description: 'Read across 5 genres.', group: 'Exploration', target: 5, metric: 'genres' },
+  { id: 'genre-hunter', name: 'Genre Hunter', description: 'Read across 10 genres.', group: 'Exploration', target: 10, metric: 'genres' },
+  { id: 'story-explorer', name: 'Story Explorer', description: 'Collect 25 story tags.', group: 'Exploration', target: 25, metric: 'tags' },
+  { id: 'first-mark', name: 'First Mark', description: 'Save one bookmark.', group: 'Library', target: 1, metric: 'bookmarks' },
+  { id: 'page-keeper', name: 'Page Keeper', description: 'Save 10 bookmarks.', group: 'Library', target: 10, metric: 'bookmarks' },
+  { id: 'archivists-notes', name: "Archivist's Notes", description: 'Save 50 bookmarks.', group: 'Library', target: 50, metric: 'bookmarks' },
+  { id: 'library-archivist', name: 'Library Archivist', description: 'Save 100 bookmarks.', group: 'Library', target: 100, metric: 'bookmarks' },
+  { id: 'first-favorite', name: 'First Favorite', description: 'Save one favorite.', group: 'Library', target: 1, metric: 'favorites' },
+  { id: 'growing-library', name: 'Growing Library', description: 'Save 10 favorites.', group: 'Library', target: 10, metric: 'favorites' },
+  { id: 'personal-library', name: 'Personal Library', description: 'Save 25 favorites.', group: 'Library', target: 25, metric: 'favorites' },
+  { id: 'full-shelves', name: 'Full Shelves', description: 'Save 50 favorites.', group: 'Library', target: 50, metric: 'favorites' },
+  { id: 'the-first-book', name: 'The First Book', description: 'Open a story in Babel.', group: 'Special', target: 1, metric: 'special' },
+];
+
+type ReadingStats = {
+  chaptersOpened: number;
+  chaptersCompleted: number;
+  novelsCompleted: number;
+  readingSeconds: number;
+  sessions: number;
+  averageSessionSeconds: number;
+  readingDays: number;
+  currentStreak: number;
+  longestStreak: number;
+  genres: number;
+  tags: number;
+  bookmarks: number;
+  favorites: number;
+};
+
+function dayKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function getReadingStats(activity: ReadingActivity[], favorites: string[], bookmarks: string[], novels: Novel[]): ReadingStats {
+  const readingDays = [...new Set(activity.filter((item) => item.durationSeconds >= 300 || item.completedChapter).map((item) => dayKey(new Date(item.startedAt))))].sort();
+  let longestStreak = 0;
+  let currentRun = 0;
+  readingDays.forEach((day, index) => {
+    const previous = index > 0 ? new Date(`${readingDays[index - 1]}T00:00:00`) : null;
+    const current = new Date(`${day}T00:00:00`);
+    if (previous && (current.getTime() - previous.getTime()) / 86400000 === 1) currentRun += 1;
+    else currentRun = 1;
+    longestStreak = Math.max(longestStreak, currentRun);
+  });
+  const today = new Date();
+  let currentStreak = 0;
+  for (let offset = 0; offset < 366; offset += 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - offset);
+    if (readingDays.includes(dayKey(date))) currentStreak += 1;
+    else if (offset > 0) break;
+  }
+  const novelMap = new Map(novels.map((novel) => [novel.id, novel]));
+  const readNovels = activity.map((item) => novelMap.get(item.novelId)).filter(Boolean) as Novel[];
+  const genresRead = new Set(readNovels.flatMap((novel) => novel.genres));
+  const tagsRead = new Set(readNovels.flatMap((novel) => novel.tags));
+  const now = Date.now();
+  const durationInRange = (days: number) => activity.filter((item) => now - new Date(item.startedAt).getTime() <= days * 86400000).reduce((total, item) => total + item.durationSeconds, 0);
+  return {
+    chaptersOpened: new Set(activity.map((item) => `${item.novelId}:${item.chapterId}:${item.startedAt}`)).size,
+    chaptersCompleted: new Set(activity.filter((item) => item.completedChapter).map((item) => `${item.novelId}:${item.chapterId}`)).size,
+    novelsCompleted: new Set(activity.filter((item) => item.completedNovel).map((item) => item.novelId)).size,
+    readingSeconds: activity.reduce((total, item) => total + item.durationSeconds, 0),
+    sessions: activity.length,
+    averageSessionSeconds: activity.length ? Math.round(activity.reduce((total, item) => total + item.durationSeconds, 0) / activity.length) : 0,
+    readingDays: readingDays.length,
+    currentStreak,
+    longestStreak,
+    genres: genresRead.size,
+    tags: tagsRead.size,
+    bookmarks: bookmarks.length,
+    favorites: favorites.length,
+  };
+}
+
+function achievementProgress(definition: AchievementDefinition, stats: ReadingStats) {
+  if (definition.metric === 'special') return stats.chaptersOpened;
+  if (definition.metric === 'streak') return stats.currentStreak;
+  return stats[definition.metric];
+}
 
 const BabelContext = createContext<BabelContextValue | null>(null);
 
@@ -152,14 +311,17 @@ const featuredNovel: Novel = {
   description:
     'In a city that only appears between midnight and morning, a cartographer maps the places people forget when the sun comes up.',
   genres: ['Literary', 'Fantasy'],
+  tags: ['city fantasy', 'found family', 'slow burn'],
+  language: 'English',
+  status: 'Ongoing',
   chapters: [
-    { id: 1, title: 'The Hour Between', minutes: 12, published: true },
-    { id: 2, title: 'A Map for Leaving', minutes: 16, published: true },
-    { id: 3, title: 'The Lantern District', minutes: 14, published: false },
+    { id: 1, title: 'The Hour Between', minutes: 12, published: true, text: 'At 12:07 every night, the city forgot one small thing.\n\nNot always the same thing. A doorstep. The name of a street. The exact sound of a person’s laugh.' },
+    { id: 2, title: 'A Map for Leaving', minutes: 16, published: true, text: 'Mara kept a pencil for these omissions.\n\nShe drew them in the margins of the atlas, where the dark was wide enough to hold a secret.' },
+    { id: 3, title: 'The Lantern District', minutes: 14, published: true, text: 'Tonight, the missing thing was the blue door at the end of Calder Street.\n\nMara knew because she had walked past it every night for seven years.' },
   ],
 };
 
-const genres: (Genre | 'All')[] = ['All', 'Fantasy', 'Literary', 'Romance', 'Mystery', 'Science fiction'];
+const genres: (Genre | 'All')[] = ['All', 'Fantasy', 'Literary', 'Romance', 'Mystery', 'Science fiction', 'Action', 'Horror', 'Drama', 'Comedy', 'Adventure'];
 
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
@@ -209,9 +371,27 @@ function Shell({
   theme: Theme;
 }) {
   const { account } = useBabel();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const touchGesture = useRef<{ x: number; y: number; blocked: boolean } | null>(null);
   const isActive = (href: string) => href === '/' ? location === '/' : location.startsWith(href);
+  const mainSections = ['/', '/discover', '/library', '/profile'];
+  const currentMainSection = mainSections.indexOf(location === '/' ? '/' : mainSections.find((section) => section !== '/' && location.startsWith(section)) ?? '');
+  const handleGlobalTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const blocked = Boolean(target.closest('input, textarea, select, button, [contenteditable="true"], [data-reader-surface]'));
+    touchGesture.current = { x: event.touches[0].clientX, y: event.touches[0].clientY, blocked };
+  };
+  const handleGlobalTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const gesture = touchGesture.current;
+    touchGesture.current = null;
+    if (!gesture || gesture.blocked || currentMainSection < 0 || window.getSelection()?.toString()) return;
+    const deltaX = event.changedTouches[0].clientX - gesture.x;
+    const deltaY = event.changedTouches[0].clientY - gesture.y;
+    if (Math.abs(deltaX) < 64 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+    const nextIndex = currentMainSection + (deltaX < 0 ? 1 : -1);
+    if (nextIndex >= 0 && nextIndex < mainSections.length) setLocation(mainSections[nextIndex]);
+  };
   const navigation = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/discover', label: 'Discover', icon: Search },
@@ -219,7 +399,7 @@ function Shell({
   ];
 
   return (
-    <div className="noise min-h-[100dvh] bg-background">
+    <div className="noise min-h-[100dvh] bg-background" onTouchStart={handleGlobalTouchStart} onTouchEnd={handleGlobalTouchEnd}>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[236px] flex-col bg-sidebar px-4 py-6 lg:flex">
         <Logo />
         <div className="mt-14">
@@ -307,6 +487,9 @@ function EmptyState({ icon: Icon, title, copy, action }: { icon: typeof Bookmark
 }
 
 function HomePage() {
+  const { history, favorites, activity } = useBabel();
+  const stats = getReadingStats(activity, favorites, [], [featuredNovel]);
+  const continueRecord = history.find((record) => record.progress > 0 && record.progress < 100);
   return (
     <div className="page-enter mx-auto max-w-[1280px] px-5 py-9 md:px-10 md:py-14">
       <div className="mb-16 flex items-start justify-between">
@@ -341,14 +524,14 @@ function HomePage() {
         </div>
         <div>
           <div className="mb-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-muted-foreground">Your reading room</p><h2 className="mt-2 font-display text-2xl">Pick up where you left off</h2></div>
-          <EmptyState icon={Clock3} title="Nothing open yet" copy="When a story catches your attention, it will wait here for your return." action={<Link href="/discover" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-xs font-semibold hover:bg-muted" data-testid="link-find-story">Find a story <ArrowRight size={14} /></Link>} />
+          {continueRecord ? <div className="rounded-2xl border border-border bg-card p-5"><div className="flex items-center gap-3"><Cover novel={featuredNovel} size="sm" /><div className="min-w-0 flex-1"><p className="font-display text-xl">{continueRecord.novelTitle}</p><p className="mt-1 text-xs text-muted-foreground">Chapter {continueRecord.chapterId}: {continueRecord.chapterTitle}</p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${continueRecord.progress}%` }} /></div></div></div><Link href={`/novel/${continueRecord.novelId}`} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-sidebar px-4 py-2.5 text-xs font-semibold text-sidebar-foreground" data-testid="link-resume-home">Resume reading <ArrowRight size={14} /></Link></div> : <EmptyState icon={Clock3} title="Nothing open yet" copy="When a story catches your attention, it will wait here for your return." action={<Link href="/discover" className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-xs font-semibold hover:bg-muted" data-testid="link-find-story">Find a story <ArrowRight size={14} /></Link>} />}
         </div>
       </section>
 
       <section className="mt-20 border-t border-border/80 pt-7">
         <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
           <div><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-muted-foreground">A small beginning</p><h2 className="mt-2 font-display text-3xl tracking-[-.025em]">Leave room for the next chapter.</h2></div>
-          <div className="grid grid-cols-3 gap-10 md:pt-2"><div><p className="font-display text-3xl">01</p><p className="mt-1 text-xs text-muted-foreground">story in the library</p></div><div><p className="font-display text-3xl">00</p><p className="mt-1 text-xs text-muted-foreground">saved for later</p></div><div><p className="font-display text-3xl">∞</p><p className="mt-1 text-xs text-muted-foreground">pages ahead</p></div></div>
+          <div className="grid grid-cols-3 gap-10 md:pt-2"><div><p className="font-display text-3xl">{String(history.length).padStart(2, '0')}</p><p className="mt-1 text-xs text-muted-foreground">reading places kept</p></div><div><p className="font-display text-3xl">{String(favorites.length).padStart(2, '0')}</p><p className="mt-1 text-xs text-muted-foreground">saved for later</p></div><div><p className="font-display text-3xl">{Math.round(stats.readingSeconds / 60)}</p><p className="mt-1 text-xs text-muted-foreground">active minutes</p></div></div>
         </div>
       </section>
     </div>
@@ -376,12 +559,13 @@ function NovelCard({ novel }: { novel: Novel }) {
 }
 
 function DiscoverPage() {
+  const { activity } = useBabel();
   const [search, setSearch] = useState('');
   const [genre, setGenre] = useState<(typeof genres)[number]>('All');
   const results = useMemo(() => {
     const normalized = search.toLowerCase();
     return [featuredNovel].filter((novel) => {
-      const matchesSearch = !normalized || `${novel.title} ${novel.author} ${novel.description}`.toLowerCase().includes(normalized);
+      const matchesSearch = !normalized || `${novel.title} ${novel.author} ${novel.description} ${novel.genres.join(' ')} ${novel.tags.join(' ')}`.toLowerCase().includes(normalized);
       const matchesGenre = genre === 'All' || novel.genres.includes(genre);
       return matchesSearch && matchesGenre;
     });
@@ -396,6 +580,7 @@ function DiscoverPage() {
       </div>
       <div className="mb-5 flex items-center justify-between"><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-muted-foreground">{results.length} {results.length === 1 ? 'story' : 'stories'} on the shelf</p><span className="text-xs text-muted-foreground">{search ? `For “${search}”` : 'Curated selection'}</span></div>
       {results.length ? <div className="grid max-w-3xl gap-4 md:grid-cols-2">{results.map((novel) => <NovelCard key={novel.id} novel={novel} />)}</div> : <EmptyState icon={Search} title="No stories found" copy="Try a different title or clear the genre filter. The catalogue is still taking shape." action={<button onClick={() => { setSearch(''); setGenre('All'); }} className="rounded-lg bg-sidebar px-4 py-2.5 text-xs font-semibold text-sidebar-foreground" data-testid="button-clear-search">Clear search</button>} />}
+       <div className="mt-16 grid max-w-3xl gap-5 md:grid-cols-3"><section className="rounded-2xl border border-border bg-card p-5 md:col-span-1"><p className="font-mono-ui text-[10px] uppercase tracking-[.16em] text-accent">Recommended for you</p><h2 className="mt-2 font-display text-2xl">{activity.length ? 'A familiar shape.' : 'Begin anywhere.'}</h2><p className="mt-3 text-xs leading-5 text-muted-foreground">{activity.length ? 'Based on the genres and tags in your reading activity.' : 'New readers see general discovery until Babel has enough reading history to personalize the shelf.'}</p><Link href={`/novel/${featuredNovel.id}`} className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-accent">Open a recommendation <ArrowRight size={13} /></Link></section><section className="rounded-2xl border border-border bg-card p-5 md:col-span-2"><div className="flex items-start justify-between gap-4"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.16em] text-accent">Popular this week</p><h2 className="mt-2 font-display text-2xl">Measured by reading.</h2></div><Sparkles size={18} className="text-accent" /></div>{activity.length ? <div className="mt-5 flex items-center justify-between rounded-xl bg-muted p-4"><div><p className="font-display text-lg">{featuredNovel.title}</p><p className="mt-1 text-xs text-muted-foreground">{activity.filter((item) => Date.now() - new Date(item.startedAt).getTime() <= 7 * 86400000 && item.novelId === featuredNovel.id).length} reading sessions this week</p></div><Link href={`/novel/${featuredNovel.id}`} className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-card">Read <ArrowRight className="ml-1 inline" size={13} /></Link></div> : <p className="mt-5 rounded-xl bg-muted p-4 text-xs leading-5 text-muted-foreground">No ranking yet. Popularity appears after real reading sessions are recorded.</p>}</section><section className="rounded-2xl border border-border bg-card p-5 md:col-span-3"><p className="font-mono-ui text-[10px] uppercase tracking-[.16em] text-accent">Popular all time</p><h2 className="mt-2 font-display text-2xl">The shelf remembers.</h2><p className="mt-3 text-xs leading-5 text-muted-foreground">{activity.length ? `${activity.length} stored reading sessions currently contribute to lifetime activity.` : 'Lifetime popularity stays empty until readers create real activity. Refreshing a chapter does not create a new session by itself.'}</p></section></div>
       <div className="mt-20 flex max-w-3xl items-center gap-4 border-t border-border pt-5 text-xs text-muted-foreground"><Sparkles size={16} className="text-accent" /><p>New shelves are added by hand. No noise, no endless scroll — just stories with somewhere to land.</p></div>
     </div>
   );
@@ -434,7 +619,7 @@ function LibraryPage() {
 function NovelPage() {
   const params = useParams<{ id?: string }>();
   const [, setLocation] = useLocation();
-  const { history, favorites, bookmarks, preferences, setPreferences, updateHistory, toggleFavorite, toggleBookmark } = useBabel();
+  const { history, favorites, bookmarks, preferences, setPreferences, updateHistory, toggleFavorite, toggleBookmark, recordReadingSession } = useBabel();
   const existingRecord = history.find((record) => record.novelId === featuredNovel.id);
   const [reading, setReading] = useState(false);
   const [chapterId, setChapterId] = useState(existingRecord?.chapterId ?? 1);
@@ -443,15 +628,18 @@ function NovelPage() {
   const [controlsVisible, setControlsVisible] = useState(true);
   const [page, setPage] = useState(0);
   const touchStart = useRef<number | null>(null);
+  const sessionStartedAt = useRef<number | null>(null);
   if (params.id !== featuredNovel.id) return <NotFound />;
   const currentChapter = featuredNovel.chapters.find((chapter) => chapter.id === chapterId) ?? featuredNovel.chapters[0];
   const publishedChapters = featuredNovel.chapters.filter((chapter) => chapter.published);
   const currentIndex = publishedChapters.findIndex((chapter) => chapter.id === currentChapter.id);
-  const pages = [
-    ['At 12:07 every night, the city forgot one small thing.', 'Not always the same thing. A doorstep. The name of a street. The exact sound of a person’s laugh. By morning, the absence had folded itself so neatly into the day that no one thought to look for it.'],
-    ['Mara kept a pencil for these omissions.', 'She drew them in the margins of the atlas, where the dark was wide enough to hold a secret.'],
-    ['Tonight, the missing thing was the blue door at the end of Calder Street.', 'Mara knew because she had walked past it every night for seven years, and because the empty wall still remembered the shape of its shadow.'],
-  ];
+  const chapterPages: Record<number, string[][]> = {
+    1: [['At 12:07 every night, the city forgot one small thing.', 'Not always the same thing. A doorstep. The name of a street. The exact sound of a person’s laugh.']],
+    2: [['Mara kept a pencil for these omissions.', 'She drew them in the margins of the atlas, where the dark was wide enough to hold a secret.']],
+    3: [['Tonight, the missing thing was the blue door at the end of Calder Street.', 'Mara knew because she had walked past it every night for seven years.']],
+  };
+  const pages = chapterPages[currentChapter.id] ?? [['The chapter is waiting to be written.']];
+  const continuousChapters = publishedChapters.map((chapter) => ({ chapter, pages: chapterPages[chapter.id] ?? [[chapter.text || 'The chapter is waiting to be written.']] }));
   const saveReadingPosition = (nextProgress = progress, nextChapter = currentChapter, nextBookmark = bookmarkedPosition) => {
     updateHistory({
       novelId: featuredNovel.id,
@@ -464,6 +652,18 @@ function NovelPage() {
       bookmarked: nextBookmark,
     });
   };
+  const finishReadingSession = (completedChapter = progress >= 100, completedNovel = completedChapter && currentIndex === publishedChapters.length - 1) => {
+    if (sessionStartedAt.current === null) return;
+    recordReadingSession({
+      novelId: featuredNovel.id,
+      chapterId: currentChapter.id,
+      startedAt: new Date(sessionStartedAt.current).toISOString(),
+      durationSeconds: Math.max(0, Math.round((Date.now() - sessionStartedAt.current) / 1000)),
+      completedChapter,
+      completedNovel,
+    });
+    sessionStartedAt.current = null;
+  };
   const openReader = (nextChapterId = existingRecord?.chapterId ?? 1) => {
     const nextChapter = publishedChapters.find((chapter) => chapter.id === nextChapterId) ?? publishedChapters[0];
     const saved = history.find((record) => record.novelId === featuredNovel.id);
@@ -473,10 +673,12 @@ function NovelPage() {
     setPage(0);
     setReading(true);
     setControlsVisible(true);
+    sessionStartedAt.current = Date.now();
     saveReadingPosition(saved?.chapterId === nextChapter.id ? saved.progress : 0, nextChapter, saved?.chapterId === nextChapter.id ? saved.bookmarked : false);
   };
   const changeChapter = (direction: -1 | 1) => {
     const next = publishedChapters[currentIndex + direction];
+    finishReadingSession(direction > 0, direction > 0 && !next);
     if (!next) {
       setProgress(direction > 0 ? 100 : 0);
       saveReadingPosition(direction > 0 ? 100 : 0, currentChapter, bookmarkedPosition);
@@ -496,16 +698,25 @@ function NovelPage() {
     lineHeight: preferences.lineSpacing === 'Compact' ? 1.48 : preferences.lineSpacing === 'Spacious' ? 2.08 : 1.8,
     maxWidth: preferences.textWidth === 'Narrow' ? '620px' : preferences.textWidth === 'Wide' ? '880px' : '760px',
   };
+  const movePage = (direction: -1 | 1) => {
+    const nextPage = page + direction;
+    if (nextPage >= 0 && nextPage < pages.length) {
+      setPage(nextPage);
+      setProgress(Math.min(100, Math.max(0, Math.round(((nextPage + (direction > 0 ? 1 : 0)) / pages.length) * 100))));
+      return;
+    }
+    changeChapter(direction);
+  };
   const handleTouchEnd = (event: React.TouchEvent) => {
     if (touchStart.current === null || preferences.mode !== 'Swipe/Page Mode') return;
     const distance = event.changedTouches[0].clientX - touchStart.current;
-    if (Math.abs(distance) > 55) changeChapter(distance < 0 ? 1 : -1);
+    if (Math.abs(distance) > 55) movePage(distance < 0 ? 1 : -1);
     touchStart.current = null;
   };
   const handleReaderClick = (event: React.MouseEvent<HTMLElement>) => {
     if (preferences.mode === 'Tap Navigation' && !controlsVisible) {
       const rect = event.currentTarget.getBoundingClientRect();
-      changeChapter(event.clientX - rect.left > rect.width / 2 ? 1 : -1);
+      movePage(event.clientX - rect.left > rect.width / 2 ? 1 : -1);
       return;
     }
     setControlsVisible((visible) => !visible);
@@ -519,22 +730,32 @@ function NovelPage() {
     if (!reading || preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation') return;
     const handleScroll = () => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      if (maxScroll > 0) setProgress(Math.min(100, Math.round((window.scrollY / maxScroll) * 100)));
+      if (maxScroll <= 0) return;
+      const nextProgress = Math.min(100, Math.round((window.scrollY / maxScroll) * 100));
+      setProgress(nextProgress);
+      const nextChapterIndex = Math.min(publishedChapters.length - 1, Math.floor((nextProgress / 100) * publishedChapters.length));
+      const nextChapter = publishedChapters[nextChapterIndex];
+      if (nextChapter && nextChapter.id !== chapterId) {
+        finishReadingSession(true, false);
+        sessionStartedAt.current = Date.now();
+        setChapterId(nextChapter.id);
+        setPage(0);
+      }
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [reading, preferences.mode]);
+  }, [reading, preferences.mode, chapterId, publishedChapters]);
   if (reading) {
     return (
       <div className="page-enter min-h-[100dvh] px-5 py-6 md:px-10 md:py-10">
         <div className={`mx-auto transition-all ${controlsVisible ? 'max-w-[1080px]' : 'max-w-[860px]'}`}>
-          <div className={`mb-8 flex items-center justify-between gap-3 ${controlsVisible ? '' : 'opacity-70'}`}><button onClick={() => setReading(false)} className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground" data-testid="button-close-reader"><ArrowLeft size={15} /> Back to details</button><div className="flex items-center gap-2"><span className="hidden font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground sm:inline">{Math.round(progress)}% complete</span><button onClick={() => setControlsVisible((visible) => !visible)} className="rounded-lg border border-border bg-card p-2 text-muted-foreground hover:bg-muted" data-testid="button-toggle-reader-controls" aria-label="Show or hide reader controls">{controlsVisible ? <EyeOff size={15} /> : <Eye size={15} />}</button></div></div>
+          <div className={`mb-8 flex items-center justify-between gap-3 ${controlsVisible ? '' : 'opacity-70'}`}><button onClick={() => { finishReadingSession(); setReading(false); }} className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground" data-testid="button-close-reader"><ArrowLeft size={15} /> Back to details</button><div className="flex items-center gap-2"><span className="hidden font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground sm:inline">{Math.round(progress)}% complete</span><button onClick={() => setControlsVisible((visible) => !visible)} className="rounded-lg border border-border bg-card p-2 text-muted-foreground hover:bg-muted" data-testid="button-toggle-reader-controls" aria-label="Show or hide reader controls">{controlsVisible ? <EyeOff size={15} /> : <Eye size={15} />}</button></div></div>
           {controlsVisible && <div className="mb-10 rounded-2xl border border-border bg-card p-4 md:p-5"><div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Reading room</p><p className="mt-2 font-display text-xl">{currentChapter.title}</p></div><div className="flex flex-wrap items-center gap-2"><select value={preferences.mode} onChange={(event) => updateMode(event.target.value as ReadingMode)} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-reading-mode">{(['Vertical Scroll', 'Continuous Reading', 'Swipe/Page Mode', 'Tap Navigation'] as ReadingMode[]).map((mode) => <option key={mode}>{mode}</option>)}</select><select value={preferences.fontSize} onChange={(event) => updatePreference('fontSize', event.target.value as FontSize)} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-reader-font-size">{(['Small', 'Medium', 'Large', 'Extra large'] as FontSize[]).map((size) => <option key={size}>{size}</option>)}</select><select value={preferences.fontFamily} onChange={(event) => updatePreference('fontFamily', event.target.value as FontFamily)} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-reader-font-family">{(['Fraunces', 'DM Sans', 'Georgia', 'System'] as FontFamily[]).map((font) => <option key={font}>{font}</option>)}</select><button onClick={() => { const next = !bookmarkedPosition; setBookmarkedPosition(next); toggleBookmark(featuredNovel.id); saveReadingPosition(progress, currentChapter, next); }} className={`inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs ${bookmarkedPosition ? 'border-accent bg-accent/10 text-accent' : 'hover:bg-muted'}`} data-testid="button-reader-bookmark"><Bookmark size={14} fill={bookmarkedPosition ? 'currentColor' : 'none'} />{bookmarkedPosition ? 'Position saved' : 'Bookmark position'}</button></div></div><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} /></div></div>}
-          <div className="mb-12 border-b border-border pb-8"><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Chapter {currentChapter.id} · {currentChapter.minutes} min</p><h1 className="mt-4 font-display text-5xl leading-none tracking-[-.04em] md:text-6xl" data-testid="heading-reading-chapter">{currentChapter.title}</h1><p className="mt-4 text-sm text-muted-foreground">{featuredNovel.title} · {featuredNovel.author}</p></div>
-          <article onClick={handleReaderClick} onTouchStart={(event) => { touchStart.current = event.touches[0].clientX; }} onTouchEnd={handleTouchEnd} className="reader-surface mx-auto cursor-text select-none rounded-2xl px-2 py-4 transition-colors hover:bg-card/40 md:px-8 md:py-8" data-testid="reader-surface">
-            <div className="reading-rule text-foreground/90" style={readerTextStyle}>{(preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation' ? pages[page] : pages.flat()).map((paragraph, index) => <p key={`${currentChapter.id}-${page}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>)}</div>
-            {(preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation') && <div className="mt-12 flex items-center justify-between border-t border-border pt-5"><button onClick={(event) => { event.stopPropagation(); setPage(Math.max(0, page - 1)); setProgress(Math.max(0, progress - 33)); }} disabled={page === 0} className="inline-flex items-center gap-2 text-xs text-muted-foreground disabled:opacity-30" data-testid="button-reader-previous-page"><ArrowLeft size={14} /> Previous page</button><span className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Page {page + 1} of {pages.length}</span><button onClick={(event) => { event.stopPropagation(); setPage(Math.min(pages.length - 1, page + 1)); setProgress(Math.min(100, progress + 33)); }} disabled={page === pages.length - 1} className="inline-flex items-center gap-2 text-xs text-muted-foreground disabled:opacity-30" data-testid="button-reader-next-page">Next page <ArrowRight size={14} /></button></div>}
+          <div className="mb-12 border-b border-border pb-8"><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">{preferences.mode === 'Continuous Reading' || preferences.mode === 'Vertical Scroll' ? `${continuousChapters.length} chapters · continuous` : `Chapter ${currentChapter.id} · ${currentChapter.minutes} min`}</p><h1 className="mt-4 font-display text-5xl leading-none tracking-[-.04em] md:text-6xl" data-testid="heading-reading-chapter">{preferences.mode === 'Continuous Reading' || preferences.mode === 'Vertical Scroll' ? featuredNovel.title : currentChapter.title}</h1><p className="mt-4 text-sm text-muted-foreground">{featuredNovel.title} · {featuredNovel.author}</p></div>
+          <article onClick={handleReaderClick} onTouchStart={(event) => { touchStart.current = event.touches[0].clientX; }} onTouchEnd={handleTouchEnd} className="reader-surface mx-auto cursor-text select-none rounded-2xl px-2 py-4 transition-colors hover:bg-card/40 md:px-8 md:py-8" data-reader-surface data-testid="reader-surface">
+            <div className="reading-rule text-foreground/90" style={readerTextStyle}>{(preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation' ? pages[page].map((paragraph, index) => <p key={`${currentChapter.id}-${page}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>) : continuousChapters.map(({ chapter, pages: chapterContent }) => <section key={chapter.id} className="mb-16"><p className="mb-6 font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Chapter {chapter.id} · {chapter.title}</p>{chapterContent.flat().map((paragraph, index) => <p key={`${chapter.id}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>)}</section>))}</div>
+            {(preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation') && <div className="mt-12 flex items-center justify-between border-t border-border pt-5"><button onClick={(event) => { event.stopPropagation(); movePage(-1); }} disabled={page === 0 && currentIndex <= 0} className="inline-flex items-center gap-2 text-xs text-muted-foreground disabled:opacity-30" data-testid="button-reader-previous-page"><ArrowLeft size={14} /> Previous page</button><span className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Page {page + 1} of {pages.length}</span><button onClick={(event) => { event.stopPropagation(); movePage(1); }} disabled={page === pages.length - 1 && currentIndex >= publishedChapters.length - 1} className="inline-flex items-center gap-2 text-xs text-muted-foreground disabled:opacity-30" data-testid="button-reader-next-page">Next page <ArrowRight size={14} /></button></div>}
           </article>
           <div className="mt-14 flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><button onClick={() => changeChapter(-1)} disabled={currentIndex <= 0} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-35" data-testid="button-previous-chapter"><ArrowLeft size={14} /> Previous</button><select value={currentChapter.id} onChange={(event) => openReader(Number(event.target.value))} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-chapter"><option value={currentChapter.id}>{currentChapter.title}</option>{publishedChapters.filter((chapter) => chapter.id !== currentChapter.id).map((chapter) => <option key={chapter.id} value={chapter.id}>Chapter {chapter.id}: {chapter.title}</option>)}</select><button onClick={() => changeChapter(1)} disabled={currentIndex >= publishedChapters.length - 1} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-35" data-testid="button-next-chapter">Next <ArrowRight size={14} /></button></div><span className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Tap the page to {controlsVisible ? 'hide' : 'show'} controls</span></div>
         </div>
@@ -642,7 +863,7 @@ function SettingsPage({ theme, setTheme }: { theme: Theme; setTheme: (theme: The
       <PageHeader eyebrow="Preferences" title="Make it yours." description="A few small choices can make a reading room feel like your own." />
       <div className="grid gap-6 md:grid-cols-[1fr_280px]">
         <div className="space-y-6">
-          <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-7"><h2 className="font-display text-2xl">Appearance</h2><p className="mt-1 text-xs text-muted-foreground">Choose the atmosphere you return to.</p></div><div className="grid gap-3 sm:grid-cols-2"><button onClick={() => setTheme('light')} className={`relative rounded-xl border p-4 text-left ${theme === 'light' ? 'border-accent ring-1 ring-accent' : 'border-border hover:bg-muted'}`} data-testid="button-theme-light"><div className="mb-4 h-16 rounded-lg border border-[#e3dccd] bg-[#f6f0e4] p-3"><div className="h-2 w-14 rounded bg-[#252b4a]" /><div className="mt-2 h-1.5 w-20 rounded bg-[#cfc6b4]" /><div className="mt-1 h-1.5 w-12 rounded bg-[#cfc6b4]" /></div><span className="text-xs font-semibold">Daylight</span>{theme === 'light' && <Check className="absolute right-4 top-4 text-accent" size={15} />}</button><button onClick={() => setTheme('dark')} className={`relative rounded-xl border p-4 text-left ${theme === 'dark' ? 'border-accent ring-1 ring-accent' : 'border-border hover:bg-muted'}`} data-testid="button-theme-dark"><div className="mb-4 h-16 rounded-lg border border-[#32364c] bg-[#191d2d] p-3"><div className="h-2 w-14 rounded bg-[#f0e9db]" /><div className="mt-2 h-1.5 w-20 rounded bg-[#5d6274]" /><div className="mt-1 h-1.5 w-12 rounded bg-[#5d6274]" /></div><span className="text-xs font-semibold">After hours</span>{theme === 'dark' && <Check className="absolute right-4 top-4 text-accent" size={15} />}</button></div></section>
+           <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-7"><h2 className="font-display text-2xl">Appearance</h2><p className="mt-1 text-xs text-muted-foreground">Choose the atmosphere you return to.</p></div><div className="grid gap-3 sm:grid-cols-2"><button onClick={() => setTheme('light')} className={`relative rounded-xl border p-4 text-left ${theme === 'light' ? 'border-accent ring-1 ring-accent' : 'border-border hover:bg-muted'}`} data-testid="button-theme-light"><div className="mb-4 h-16 rounded-lg border border-[#d9e4f2] bg-[#f7fbff] p-3"><div className="h-2 w-14 rounded bg-[#2474c6]" /><div className="mt-2 h-1.5 w-20 rounded bg-[#c8d8ea]" /><div className="mt-1 h-1.5 w-12 rounded bg-[#c8d8ea]" /></div><span className="text-xs font-semibold">Daylight</span>{theme === 'light' && <Check className="absolute right-4 top-4 text-accent" size={15} />}</button><button onClick={() => setTheme('dark')} className={`relative rounded-xl border p-4 text-left ${theme === 'dark' ? 'border-accent ring-1 ring-accent' : 'border-border hover:bg-muted'}`} data-testid="button-theme-dark"><div className="mb-4 h-16 rounded-lg border border-[#32364c] bg-[#11131d] p-3"><div className="h-2 w-14 rounded bg-[#b95b46]" /><div className="mt-2 h-1.5 w-20 rounded bg-[#5d6274]" /><div className="mt-1 h-1.5 w-12 rounded bg-[#5d6274]" /></div><span className="text-xs font-semibold">After hours</span>{theme === 'dark' && <Check className="absolute right-4 top-4 text-accent" size={15} />}</button></div><div className="mt-7"><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Reader accent</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.accentColor}</span></div><div className="flex flex-wrap gap-2">{(['Babel Blue', 'Babel Orange', 'Lavender', 'Sage', 'Rose'] as AccentColor[]).map((accent) => <button key={accent} onClick={() => setPreferences({ ...preferences, accentColor: accent })} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs ${preferences.accentColor === accent ? 'border-accent bg-accent/10 text-accent' : 'border-border text-muted-foreground hover:bg-muted'}`} data-testid={`button-accent-${accent.toLowerCase().replaceAll(' ', '-')}`}><span className={`h-3 w-3 rounded-full ${accent === 'Babel Blue' ? 'bg-[#2474c6]' : accent === 'Babel Orange' ? 'bg-[#b95b46]' : accent === 'Lavender' ? 'bg-[#8d72c9]' : accent === 'Sage' ? 'bg-[#45806a]' : 'bg-[#c94f70]'}`} />{accent}</button>)}</div></div></section>
           <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-7"><h2 className="font-display text-2xl">Reading preferences</h2><p className="mt-1 text-xs text-muted-foreground">Tune the page for the way your eyes like to wander.</p></div><div className="space-y-7"><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Reading mode</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.mode}</span></div>{control('reading-mode', 'mode', ['Vertical Scroll', 'Continuous Reading', 'Swipe/Page Mode', 'Tap Navigation'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Font size</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.fontSize}</span></div>{control('font-size', 'fontSize', ['Small', 'Medium', 'Large', 'Extra large'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Font family</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.fontFamily}</span></div>{control('font-family', 'fontFamily', ['Fraunces', 'DM Sans', 'Georgia', 'System'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Line spacing</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.lineSpacing}</span></div>{control('line-spacing', 'lineSpacing', ['Compact', 'Comfortable', 'Spacious'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Text width</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.textWidth}</span></div>{control('text-width', 'textWidth', ['Narrow', 'Comfortable', 'Wide'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Paragraph spacing</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.paragraphSpacing}</span></div>{control('paragraph-spacing', 'paragraphSpacing', ['Tight', 'Comfortable', 'Generous'])}</div></div></section>
           <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-5"><h2 className="font-display text-2xl">Interface</h2><p className="mt-1 text-xs text-muted-foreground">A couple of gentle signals, never more than you need.</p></div><div className="divide-y divide-border"><button onClick={() => setShowProgress(!showProgress)} className="flex w-full items-center justify-between py-4 text-left" data-testid="button-toggle-progress"><span><span className="block text-xs font-semibold">Show reading progress</span><span className="mt-1 block text-[11px] text-muted-foreground">Keep a small marker at the foot of each chapter.</span></span><span className={`flex h-6 w-10 items-center rounded-full p-1 transition-colors ${showProgress ? 'bg-accent' : 'bg-muted'}`}><span className={`h-4 w-4 rounded-full bg-white transition-transform ${showProgress ? 'translate-x-4' : ''}`} /></span></button><button onClick={() => setFocusMode(!focusMode)} className="flex w-full items-center justify-between py-4 text-left" data-testid="button-toggle-focus"><span><span className="block text-xs font-semibold">Focus mode by default</span><span className="mt-1 block text-[11px] text-muted-foreground">Hide surrounding navigation when a chapter opens.</span></span><span className={`flex h-6 w-10 items-center rounded-full p-1 transition-colors ${focusMode ? 'bg-accent' : 'bg-muted'}`}><span className={`h-4 w-4 rounded-full bg-white transition-transform ${focusMode ? 'translate-x-4' : ''}`} /></span></button></div></section>
         </div>
@@ -707,27 +928,90 @@ function AuthPage() {
           {notice && <p className="rounded-lg bg-muted p-3 text-xs text-destructive" role="alert">{notice}</p>}
           <button onClick={submit} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sidebar px-4 py-3 text-xs font-semibold text-sidebar-foreground hover:opacity-90" data-testid="button-submit-auth">{mode === 'signin' ? <LogIn size={15} /> : <UserPlus size={15} />}{mode === 'signin' ? 'Sign in' : 'Create account'}<ArrowRight size={14} /></button>
         </div>
-        <p className="mt-6 text-center text-[11px] leading-5 text-muted-foreground">Prototype accounts stay on this device until account services are connected.</p>
+        <div className="mt-6 rounded-xl border border-accent/25 bg-accent/10 p-3 text-[11px] leading-5 text-muted-foreground"><span className="font-semibold text-accent">External configuration required:</span> secure email/password login, password reset, email verification, Google/Facebook sign-in, account linking, and server-backed account deletion are not enabled in this frontend-only prototype. No external passwords are stored.</div>
+        <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => setNotice('Password reset requires the secure authentication service to be connected.')} className="rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground hover:bg-muted" data-testid="button-password-reset">Forgot password?</button><button onClick={() => setNotice('Email verification requires the secure authentication service to be connected.')} className="rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground hover:bg-muted" data-testid="button-email-verification">Resend verification</button></div>
+        <p className="mt-4 text-center text-[11px] leading-5 text-muted-foreground">Local prototype sessions stay on this device until account services are connected.</p>
       </section>
     </div>
   );
 }
 
+function BadgeMark({ title, group, locked = false, featured = false }: { title: string; group: AchievementGroup; locked?: boolean; featured?: boolean }) {
+  const icons: Record<AchievementGroup, typeof BookOpen> = {
+    Reading: BookOpen,
+    Streaks: Sparkles,
+    Completion: Check,
+    Time: Clock3,
+    Exploration: Search,
+    Library: Bookmark,
+    Special: Key,
+  };
+  const Icon = icons[group];
+  return <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border ${locked ? 'border-border bg-muted text-muted-foreground/35' : featured ? 'border-accent bg-accent text-accent-foreground shadow-[0_8px_20px_rgba(37,42,65,.16)]' : 'border-accent/30 bg-accent/10 text-accent'}`} title={title}><Icon size={24} strokeWidth={1.7} /></div>;
+}
+
+function ShareButton({ text }: { text: string }) {
+  const [notice, setNotice] = useState('');
+  const share = async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: 'BABEL', text });
+      else if (navigator.clipboard) await navigator.clipboard.writeText(text);
+      else throw new Error('Sharing is unavailable');
+      setNotice('Ready to share');
+    } catch {
+      setNotice('Copy unavailable on this device');
+    }
+  };
+  return <span className="inline-flex items-center gap-2"><button onClick={share} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted" data-testid="button-share-babel"><Upload size={14} /> Share</button>{notice && <span className="text-[10px] text-muted-foreground">{notice}</span>}</span>;
+}
+
 function ProfilePage() {
-  const { account, setAccount } = useBabel();
+  const { account, setAccount, activity, favorites, bookmarks, profile, setProfile } = useBabel();
   const [, setLocation] = useLocation();
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [profileNotice, setProfileNotice] = useState('');
+  const stats = getReadingStats(activity, favorites, bookmarks, [featuredNovel]);
+  const progressFor = (definition: AchievementDefinition) => achievementProgress(definition, stats);
+  const earned = achievementDefinitions.filter((definition) => progressFor(definition) >= definition.target);
+  const featured = earned.find((definition) => definition.id === profile.featuredBadge) ?? earned[0];
+  const creatorBadge = account?.email.toLowerCase() === 'manoflies143@gmail.com' && account.emailVerified === true;
+  const handleAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) {
+      setProfileNotice('Choose an image under 2 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setProfile({ ...profile, avatar: String(reader.result) });
+    reader.readAsDataURL(file);
+  };
+  const deleteAccount = () => {
+    if (!window.confirm('Delete this local prototype account from this device?')) return;
+    setAccount(null);
+    setProfile(defaultProfile);
+    setLocation('/auth');
+  };
   if (!account) return <AuthPage />;
   return (
     <div className="page-enter mx-auto max-w-[1000px] px-5 py-9 md:px-10 md:py-14">
       <PageHeader eyebrow="Account" title="Your profile." description="Your BABEL account keeps your reading room close and your publishing tools ready." />
       <div className="grid gap-6 md:grid-cols-[1fr_320px]">
         <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
-          <div className="flex items-center gap-4 border-b border-border pb-6"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent font-display text-xl text-accent-foreground">{account.name.slice(0, 2).toUpperCase()}</div><div><p className="font-display text-2xl">{account.name}</p><p className="mt-1 text-xs text-muted-foreground">{account.email}</p></div></div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2"><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Account type</p><p className="mt-3 text-sm font-semibold">{account.role === 'publisher' ? 'Publisher account' : 'Reader account'}</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Access</p><p className="mt-3 text-sm font-semibold">{account.role === 'publisher' ? 'Reader + publishing tools' : 'Reader tools'}</p></div></div>
+          <div className="flex flex-wrap items-center gap-4 border-b border-border pb-6"><div className="relative">{profile.avatar ? <img src={profile.avatar} alt={`${account.name} profile`} className="h-16 w-16 rounded-2xl object-cover" /> : <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent font-display text-xl text-accent-foreground">{account.name.slice(0, 2).toUpperCase()}</div>}<label className="absolute -bottom-2 -right-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground" title="Change profile picture"><Upload size={13} /><input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatar} className="hidden" /></label></div><div><p className="font-display text-2xl">{account.name}</p><p className="mt-1 text-xs text-muted-foreground">{account.email}</p><p className="mt-2 font-mono-ui text-[10px] uppercase tracking-[.12em] text-accent">{account.role === 'publisher' ? 'Publisher account' : 'Reader account'}</p></div>{profile.avatar && <button onClick={() => setProfile({ ...profile, avatar: null })} className="ml-auto text-[11px] text-muted-foreground hover:text-destructive" data-testid="button-remove-avatar">Remove picture</button>}</div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Current streak</p><p className="mt-3 font-display text-2xl">{stats.currentStreak}</p><p className="mt-1 text-[11px] text-muted-foreground">days</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Longest streak</p><p className="mt-3 font-display text-2xl">{stats.longestStreak}</p><p className="mt-1 text-[11px] text-muted-foreground">days</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Chapters done</p><p className="mt-3 font-display text-2xl">{stats.chaptersCompleted}</p><p className="mt-1 text-[11px] text-muted-foreground">completed</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Novels done</p><p className="mt-3 font-display text-2xl">{stats.novelsCompleted}</p><p className="mt-1 text-[11px] text-muted-foreground">completed</p></div></div>
+          <div className="mt-6 rounded-2xl border border-accent/25 bg-accent/10 p-5"><div className="flex items-center gap-4"><BadgeMark title={featured?.name ?? 'No featured badge'} group={featured?.group ?? 'Special'} featured={Boolean(featured)} /><div className="min-w-0 flex-1"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Featured badge</p><p className="mt-2 font-display text-xl">{featured?.name ?? 'Earn your first badge'}</p><p className="mt-1 text-xs text-muted-foreground">{featured?.description ?? 'Open a chapter to begin.'}</p></div>{featured && (profile.achievementsPublic ? <ShareButton text={`BABEL · ${featured.name} · ${featured.description}`} /> : <span className="text-[10px] text-muted-foreground">Private</span>)}</div></div>
           {account.role === 'publisher' && <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 p-4 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-accent">Publisher Plan</span> — Monthly subscription coming soon. Payment verification is not active in this prototype.</div>}
+          {profileNotice && <p className="mt-4 rounded-lg bg-muted p-3 text-xs text-destructive" role="alert">{profileNotice}</p>}
+          <div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => setShowAchievements(!showAchievements)} className="rounded-lg bg-sidebar px-4 py-3 text-xs font-semibold text-sidebar-foreground" data-testid="button-view-all-achievements">{showAchievements ? 'Hide achievements' : 'View all achievements'}</button>{profile.statsPublic ? <ShareButton text={`BABEL · ${stats.chaptersCompleted} chapters completed · ${stats.currentStreak} day reading streak`} /> : <span className="flex items-center justify-center rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground">Stats are private</span>}</div>
+          {showAchievements && <div className="mt-6 space-y-6"><div><h3 className="font-display text-xl">Badge collection</h3><p className="mt-1 text-xs text-muted-foreground">Earned badges can be featured. Locked badges show real progress only.</p></div>{(['Reading', 'Streaks', 'Completion', 'Time', 'Exploration', 'Library', 'Special'] as AchievementGroup[]).map((group) => <section key={group}><p className="mb-3 font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">{group}</p><div className="grid gap-3 sm:grid-cols-2">{achievementDefinitions.filter((definition) => definition.group === group).map((definition) => { const progress = progressFor(definition); const isEarned = progress >= definition.target; return <div key={definition.id} className="flex items-center gap-3 rounded-xl border border-border p-3"><BadgeMark title={definition.name} group={group} locked={!isEarned} featured={profile.featuredBadge === definition.id} /><div className="min-w-0 flex-1"><p className="text-xs font-semibold">{definition.name}</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">{definition.description}</p><div className="mt-2 h-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (progress / definition.target) * 100)}%` }} /></div><p className="mt-1 font-mono-ui text-[9px] text-muted-foreground">{Math.min(progress, definition.target)} / {definition.target}</p></div>{isEarned ? <button onClick={() => setProfile({ ...profile, featuredBadge: definition.id })} className="rounded-lg border border-border px-2 py-1 text-[10px] hover:bg-muted" data-testid={`button-feature-badge-${definition.id}`}>{profile.featuredBadge === definition.id ? 'Featured' : 'Feature'}</button> : <span className="text-[10px] text-muted-foreground">Locked</span>}</div>; })}</div></section>)}</div>}
         </section>
         <aside className="space-y-5">
           <div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-xl">Your account</h3><div className="mt-5 space-y-2"><Link href="/library" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open my library <ArrowRight size={14} /></Link>{account.role === 'publisher' && <Link href="/publisher" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open publisher desk <ArrowRight size={14} /></Link>}<Link href="/settings" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Reading settings <ArrowRight size={14} /></Link></div></div>
+          <div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-xl">Privacy</h3><div className="mt-4 space-y-3"><label className="flex items-center justify-between gap-3 text-xs"><span>Profile public</span><input type="checkbox" checked={profile.profilePublic} onChange={(event) => setProfile({ ...profile, profilePublic: event.target.checked })} /></label><label className="flex items-center justify-between gap-3 text-xs"><span>Stats public</span><input type="checkbox" checked={profile.statsPublic} onChange={(event) => setProfile({ ...profile, statsPublic: event.target.checked })} /></label><label className="flex items-center justify-between gap-3 text-xs"><span>Achievements public</span><input type="checkbox" checked={profile.achievementsPublic} onChange={(event) => setProfile({ ...profile, achievementsPublic: event.target.checked })} /></label><p className="pt-2 text-[11px] leading-5 text-muted-foreground">Sharing uses only the information you choose to share.</p></div></div>
+          {creatorBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="The First Tower" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Creator badge</p><p className="mt-2 font-display text-xl">The First Tower</p><p className="mt-1 text-xs text-muted-foreground">Reserved for the securely verified Babel creator identity.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Creator badge</p><p className="mt-3 text-xs leading-5 text-muted-foreground">Reserved for a securely verified creator identity. External authentication configuration is required.</p></div>}
+          <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Founding reader badges</p><p className="mt-3 text-xs leading-5 text-muted-foreground">First-10 reader assignment requires server-side account creation order. It is not claimable from this local prototype.</p></div>
+          <button onClick={deleteAccount} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs text-muted-foreground hover:bg-muted hover:text-destructive" data-testid="button-delete-account"><Trash2 size={14} /> Delete local account</button>
           <button onClick={() => { setAccount(null); setLocation('/'); }} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground" data-testid="button-logout"><LogOut size={15} /> Log out</button>
         </aside>
       </div>
@@ -770,10 +1054,32 @@ function App() {
   const [favorites, setFavorites] = useState<string[]>(() => loadStored<string[]>('babel-favorites', []));
   const [bookmarks, setBookmarks] = useState<string[]>(() => loadStored<string[]>('babel-bookmarks', []));
   const [preferences, setPreferencesState] = useState<ReadingPreferences>(() => ({ ...defaultPreferences, ...loadStored<Partial<ReadingPreferences>>('babel-reading-preferences', {}) }));
+  const [activity, setActivity] = useState<ReadingActivity[]>(() => loadStored<ReadingActivity[]>('babel-reading-activity', []));
+  const [profile, setProfileState] = useState<ProfileSettings>(() => ({ ...defaultProfile, ...loadStored<Partial<ProfileSettings>>('babel-profile', {}) }));
+  const [achievementNotice, setAchievementNotice] = useState<AchievementDefinition | null>(null);
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('babel-theme', theme);
   }, [theme]);
+  useEffect(() => {
+    const customAccent = localStorage.getItem('babel-accent-customized') === 'true';
+    if (!customAccent) {
+      setPreferencesState((current) => ({ ...current, accentColor: theme === 'dark' ? 'Babel Orange' : 'Babel Blue' }));
+    }
+  }, [theme]);
+  useEffect(() => {
+    const accents: Record<AccentColor, { value: string; foreground: string }> = {
+      'Babel Blue': { value: '211 72% 48%', foreground: '0 0% 100%' },
+      'Babel Orange': { value: '11 62% 47%', foreground: '0 0% 100%' },
+      Lavender: { value: '263 54% 62%', foreground: '0 0% 100%' },
+      Sage: { value: '151 32% 40%', foreground: '0 0% 100%' },
+      Rose: { value: '347 55% 52%', foreground: '0 0% 100%' },
+    };
+    const selected = accents[preferences.accentColor];
+    document.documentElement.style.setProperty('--accent', selected.value);
+    document.documentElement.style.setProperty('--accent-foreground', selected.foreground);
+    document.documentElement.style.setProperty('--ring', selected.value);
+  }, [preferences.accentColor]);
   const setAccount = (next: Account | null) => {
     setAccountState(next);
     saveStored('babel-account', next);
@@ -813,7 +1119,29 @@ function App() {
   const setPreferences = (next: ReadingPreferences) => {
     setPreferencesState(next);
     saveStored('babel-reading-preferences', next);
+    if (next.accentColor !== preferences.accentColor) localStorage.setItem('babel-accent-customized', 'true');
   };
+  const recordReadingSession = (session: Omit<ReadingActivity, 'id'>) => {
+    setActivity((current) => {
+      const id = `${session.novelId}:${session.chapterId}:${session.startedAt}`;
+      if (current.some((item) => item.id === id)) return current;
+      const next = [...current, { ...session, id }];
+      saveStored('babel-reading-activity', next);
+      return next;
+    });
+  };
+  const setProfile = (next: ProfileSettings) => {
+    setProfileState(next);
+    saveStored('babel-profile', next);
+  };
+  const activityStats = getReadingStats(activity, favorites, bookmarks, [featuredNovel]);
+  const earnedAchievementIds = achievementDefinitions.filter((definition) => achievementProgress(definition, activityStats) >= definition.target).map((definition) => definition.id);
+  useEffect(() => {
+    const known = loadStored<string[]>('babel-earned-achievements', []);
+    const newlyEarned = earnedAchievementIds.find((id) => !known.includes(id));
+    if (newlyEarned) setAchievementNotice(achievementDefinitions.find((definition) => definition.id === newlyEarned) ?? null);
+    if (earnedAchievementIds.join('|') !== known.join('|')) saveStored('babel-earned-achievements', earnedAchievementIds);
+  }, [earnedAchievementIds.join('|')]);
   const contextValue: BabelContextValue = {
     account,
     setAccount,
@@ -822,6 +1150,10 @@ function App() {
     bookmarks,
     preferences,
     setPreferences,
+    activity,
+    recordReadingSession,
+    profile,
+    setProfile,
     updateHistory,
     removeHistory,
     clearHistory,
@@ -836,6 +1168,7 @@ function App() {
             <Router theme={theme} setTheme={setTheme} />
           </WouterRouter>
           <Toaster />
+           {achievementNotice && <div className="fixed bottom-5 right-5 z-[60] flex max-w-sm items-start gap-3 rounded-2xl border border-accent/30 bg-card p-4 shadow-[var(--shadow-card)]" role="status"><BadgeMark title={achievementNotice.name} group={achievementNotice.group} /><div className="min-w-0 flex-1"><p className="font-mono-ui text-[10px] uppercase tracking-[.14em] text-accent">Achievement unlocked</p><p className="mt-1 font-display text-lg">{achievementNotice.name}</p><p className="mt-1 text-xs text-muted-foreground">{achievementNotice.description}</p></div><button onClick={() => setAchievementNotice(null)} className="rounded-lg p-1 text-muted-foreground hover:bg-muted" aria-label="Dismiss achievement notification"><X size={14} /></button></div>}
         </BabelContext.Provider>
       </TooltipProvider>
     </QueryClientProvider>

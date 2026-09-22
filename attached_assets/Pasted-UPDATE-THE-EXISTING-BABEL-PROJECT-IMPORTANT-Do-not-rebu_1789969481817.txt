@@ -1,0 +1,128 @@
+UPDATE THE EXISTING BABEL PROJECT.
+
+IMPORTANT:
+Do not rebuild the application.
+Do not change the existing visual design.
+Keep all existing Babel features and components.
+Make only the changes required below.
+
+Add touch/swipe navigation to the MAIN BABEL INTERFACE.
+
+The main sections should be navigable by horizontal swiping:
+
+HOME → DISCOVER → LIBRARY → PROFILE
+
+Swipe left:
+
+* Move to the next main section.
+
+Swipe right:
+
+* Move to the previous main section.
+
+Example:
+Home → swipe left → Discover
+Discover → swipe left → Library
+Library → swipe left → Profile
+
+Reverse direction when swiping right.
+
+Add smooth but lightweight transitions between sections.
+
+Do NOT remove normal navigation.
+
+Users should still be able to navigate using:
+
+* Sidebar/navigation panel
+* Navigation buttons
+* Touch controls
+
+Swipe navigation is an additional interaction method.
+
+Make the interface work properly on:
+
+* iPad/tablets
+* Phones
+* Desktop
+
+IMPORTANT:
+
+Swipe navigation must NOT interfere with reading.
+
+When the user is inside the NOVEL READER:
+
+* Swipe left/right should perform the selected reading-mode action.
+* It should NOT switch between Home, Discover, Library, or Profile.
+
+Reader swipe behavior:
+
+SWIPE/PAGE MODE:
+
+* Swipe left → next page
+* Swipe right → previous page
+
+TAP MODE:
+
+* Tap right → next
+* Tap left → previous
+
+VERTICAL/CONTINUOUS MODE:
+
+* Normal vertical scrolling
+
+The reader must take priority over the global navigation gesture.
+
+Avoid triggering navigation when:
+
+* The user is scrolling vertically.
+* The user is interacting with an input field.
+* The user is typing in the publisher editor.
+* The user is selecting text.
+* The user is interacting with buttons or controls.
+
+Only treat a gesture as horizontal navigation when it is clearly a horizontal swipe.
+
+Do not interfere with:
+
+* Search input
+* Chapter editor
+* Publisher dashboard controls
+* Settings controls
+
+Make the gesture system work naturally on touch devices.
+
+On desktop:
+
+* Existing mouse/click navigation remains available.
+
+On iPad/tablet:
+
+* Horizontal swiping should feel natural.
+* Do not require a keyboard.
+
+On phone:
+
+* Same swipe navigation behavior.
+
+Keep the implementation lightweight.
+
+Do not install unnecessary libraries if the feature can be implemented with the existing React/JavaScript setup.
+
+Reuse existing components and navigation state.
+
+Do not rewrite unrelated files.
+
+After implementing:
+
+1. Test Home → Discover with swipe.
+2. Test Discover → Library with swipe.
+3. Test Library → Profile with swipe.
+4. Test reverse swiping.
+5. Test Reader swipe mode.
+6. Make sure Reader swipes do not change main sections.
+7. Make sure the Publisher Editor still works.
+8. Make sure typing/searching is unaffected.
+9. Make sure desktop navigation still works.
+10. Fix any errors caused by the update.
+
+Preserve every existing Babel feature and design.
