@@ -127,6 +127,7 @@ type ReadingActivity = {
 type ProfileSettings = {
   avatar: string | null;
   featuredBadge: string | null;
+  profileTitle: string;
   profilePublic: boolean;
   statsPublic: boolean;
   achievementsPublic: boolean;
@@ -173,6 +174,7 @@ const defaultPreferences: ReadingPreferences = {
 const defaultProfile: ProfileSettings = {
   avatar: null,
   featuredBadge: null,
+  profileTitle: 'Reader',
   profilePublic: false,
   statsPublic: false,
   achievementsPublic: false,
@@ -925,12 +927,43 @@ function AuthPage() {
       setNotice('Enter a valid email address to continue.');
       return;
     }
+    if (password.length < 6) {
+      setNotice('Use a password with at least 6 characters.');
+      return;
+    }
+    const normalizedEmail = email.trim().toLowerCase();
+    if (mode === 'signin') {
+      const storedCredential = loadStored<{ email: string; password: string } | null>('babel-credential', null);
+      if (!storedCredential || storedCredential.email !== normalizedEmail || storedCredential.password !== password) {
+        setNotice('Email or password is incorrect for this device.');
+        return;
+      }
+      const storedAccount = loadStored<Account | null>('babel-account', null);
+      if (!storedAccount) {
+        setNotice('No local account was found on this device.');
+        return;
+      }
+      setAccount(storedAccount);
+      setLocation(storedAccount.role === 'publisher' ? '/publisher' : '/');
+      return;
+    }
+    const readerCount = loadStored<number>('babel-reader-registration-count', 0);
+    const isReader = role === 'reader';
+    const foundingReaderNumber = isReader && readerCount < 10 ? readerCount + 1 : undefined;
+    if (isReader) saveStored('babel-reader-registration-count', readerCount + 1);
+    const creatorEmail = String((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_BABEL_CREATOR_EMAIL || '').trim().toLowerCase();
     const nextAccount: Account = {
-      name: mode === 'create' ? name.trim() : email.split('@')[0],
-      email: email.trim().toLowerCase(),
+      name: name.trim(),
+      email: normalizedEmail,
       role,
       createdAt: new Date().toISOString(),
+      emailVerified: false,
+      serverBadgeEntitlements: {
+        creator: Boolean(creatorEmail && normalizedEmail === creatorEmail),
+        ...(foundingReaderNumber ? { foundingReaderNumber } : {}),
+      },
     };
+    saveStored('babel-credential', { email: normalizedEmail, password });
     setAccount(nextAccount);
     setLocation(role === 'publisher' ? '/publisher' : '/');
   };
@@ -953,6 +986,7 @@ function AuthPage() {
         <div className="mt-7 space-y-4">
           {mode === 'create' && <label className="block"><span className="mb-2 block text-xs font-semibold">Name</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder="What should we call you?" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-account-name" /></label>}
           <label className="block"><span className="mb-2 block text-xs font-semibold">Email</span><input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="you@example.com" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-account-email" /></label>
+          <label className="block"><span className="mb-2 block text-xs font-semibold">Password</span><input value={password} onChange={(event) => setPassword(event.target.value)} type="password" minLength={6} placeholder="At least 6 characters" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-account-password" /></label>
           {mode === 'create' && <div><span className="mb-2 block text-xs font-semibold">Account type</span><div className="grid gap-2 sm:grid-cols-2"><button onClick={() => setRole('reader')} className={`rounded-xl border p-3 text-left ${role === 'reader' ? 'border-accent bg-accent/10' : 'border-border hover:bg-muted'}`} data-testid="button-role-reader"><User size={16} className="mb-3 text-accent" /><span className="block text-xs font-semibold">Reader account</span><span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Read, save, and return to your place.</span></button><button onClick={() => setRole('publisher')} className={`rounded-xl border p-3 text-left ${role === 'publisher' ? 'border-accent bg-accent/10' : 'border-border hover:bg-muted'}`} data-testid="button-role-publisher"><UserPlus size={16} className="mb-3 text-accent" /><span className="block text-xs font-semibold">Publisher account</span><span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Publish novels and manage chapters.</span></button></div></div>}
           {mode === 'create' && role === 'publisher' && <div className="rounded-xl border border-accent/30 bg-accent/10 p-3 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-accent">Publisher Plan</span> — Monthly subscription coming soon. Publishing tools are available in this prototype without payment.</div>}
           {notice && <p className="rounded-lg bg-muted p-3 text-xs text-destructive" role="alert">{notice}</p>}
@@ -987,11 +1021,11 @@ function BadgeMark({ title, group, locked = false, featured = false }: { title: 
   );
 }
 
-function ShareButton({ text }: { text: string }) {
+function ShareButton({ text, title = 'BABEL' }: { text: string; title?: string }) {
   const [notice, setNotice] = useState('');
   const share = async () => {
     try {
-      if (navigator.share) await navigator.share({ title: 'BABEL', text });
+      if (navigator.share) await navigator.share({ title, text });
       else if (navigator.clipboard) await navigator.clipboard.writeText(text);
       else throw new Error('Sharing is unavailable');
       setNotice('Ready to share');
@@ -1037,12 +1071,13 @@ function ProfilePage() {
       <PageHeader eyebrow="Account" title="Your profile." description="Your BABEL account keeps your reading room close and your publishing tools ready." />
       <div className="grid gap-6 md:grid-cols-[1fr_320px]">
         <section className="rounded-2xl border border-border bg-card p-6 md:p-8">
-          <div className="flex flex-wrap items-center gap-4 border-b border-border pb-6"><div className="relative">{profile.avatar ? <img src={profile.avatar} alt={`${account.name} profile`} className="h-16 w-16 rounded-2xl object-cover" /> : <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent font-display text-xl text-accent-foreground">{account.name.slice(0, 2).toUpperCase()}</div>}<label className="absolute -bottom-2 -right-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground" title="Change profile picture"><Upload size={13} /><input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatar} className="hidden" /></label></div><div><p className="font-display text-2xl">{account.name}</p><p className="mt-1 text-xs text-muted-foreground">{account.email}</p><p className="mt-2 font-mono-ui text-[10px] uppercase tracking-[.12em] text-accent">{account.role === 'publisher' ? 'Publisher account' : 'Reader account'}</p></div>{profile.avatar && <button onClick={() => setProfile({ ...profile, avatar: null })} className="ml-auto text-[11px] text-muted-foreground hover:text-destructive" data-testid="button-remove-avatar">Remove picture</button>}</div>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Current streak</p><p className="mt-3 font-display text-2xl">{stats.currentStreak}</p><p className="mt-1 text-[11px] text-muted-foreground">days</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Longest streak</p><p className="mt-3 font-display text-2xl">{stats.longestStreak}</p><p className="mt-1 text-[11px] text-muted-foreground">days</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Chapters done</p><p className="mt-3 font-display text-2xl">{stats.chaptersCompleted}</p><p className="mt-1 text-[11px] text-muted-foreground">completed</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Novels done</p><p className="mt-3 font-display text-2xl">{stats.novelsCompleted}</p><p className="mt-1 text-[11px] text-muted-foreground">completed</p></div></div>
-          <div className="badge-featured-panel mt-6 rounded-2xl border border-accent/25 bg-accent/10 p-5"><div className="flex items-center gap-4"><BadgeMark title={featured?.name ?? 'No featured badge'} group={featured?.group ?? 'Special'} featured={Boolean(featured)} /><div className="min-w-0 flex-1"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Featured badge</p><p className="mt-2 font-display text-xl">{featured?.name ?? 'Earn your first badge'}</p><p className="mt-1 text-xs text-muted-foreground">{featured?.description ?? 'Open a chapter to begin.'}</p></div>{featured && (profile.achievementsPublic ? <ShareButton text={`BABEL · ${featured.name} · ${featured.description}`} /> : <span className="text-[10px] text-muted-foreground">Private</span>)}</div></div>
+          <div className="flex flex-wrap items-center gap-4 border-b border-border pb-6"><div className="relative">{profile.avatar ? <img src={profile.avatar} alt={`${account.name} profile`} className="h-16 w-16 rounded-2xl object-cover" /> : <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent font-display text-xl text-accent-foreground">{account.name.slice(0, 2).toUpperCase()}</div>}<label className="absolute -bottom-2 -right-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground" title="Change profile picture"><Upload size={13} /><input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatar} className="hidden" /></label></div><div><p className="font-display text-2xl">{account.name}</p><p className="mt-1 text-xs text-muted-foreground">{profile.profileTitle || 'Reader'} · {account.email}</p><p className="mt-2 font-mono-ui text-[10px] uppercase tracking-[.12em] text-accent">{account.role === 'publisher' ? 'Publisher account' : 'Reader account'}</p></div>{profile.avatar && <button onClick={() => setProfile({ ...profile, avatar: null })} className="ml-auto text-[11px] text-muted-foreground hover:text-destructive" data-testid="button-remove-avatar">Remove picture</button>}</div>
+          <div className="mt-6 rounded-xl border border-border bg-muted/50 p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Profile identity</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="block"><span className="mb-1 block text-[11px] font-semibold">Display name</span><input value={account.name} onChange={(event) => setAccount({ ...account, name: event.target.value })} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-xs outline-none focus:border-accent" data-testid="input-profile-display-name" /></label><label className="block"><span className="mb-1 block text-[11px] font-semibold">Profile title</span><input value={profile.profileTitle} onChange={(event) => setProfile({ ...profile, profileTitle: event.target.value.slice(0, 32) })} placeholder="Reader, Archivist, Night Owl..." className="h-10 w-full rounded-lg border border-input bg-background px-3 text-xs outline-none focus:border-accent" data-testid="input-profile-title" /></label></div></div>
+<div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Current streak</p><p className="mt-3 font-display text-2xl">{stats.currentStreak}</p><p className="mt-1 text-[11px] text-muted-foreground">days</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Longest streak</p><p className="mt-3 font-display text-2xl">{stats.longestStreak}</p><p className="mt-1 text-[11px] text-muted-foreground">days</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Chapters done</p><p className="mt-3 font-display text-2xl">{stats.chaptersCompleted}</p><p className="mt-1 text-[11px] text-muted-foreground">completed</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Novels done</p><p className="mt-3 font-display text-2xl">{stats.novelsCompleted}</p><p className="mt-1 text-[11px] text-muted-foreground">completed</p></div></div>
+          <div className="badge-featured-panel mt-6 rounded-2xl border border-accent/25 bg-accent/10 p-5"><div className="flex items-center gap-4"><BadgeMark title={featured?.name ?? 'No featured badge'} group={featured?.group ?? 'Special'} featured={Boolean(featured)} /><div className="min-w-0 flex-1"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Featured badge</p><p className="mt-2 font-display text-xl">{featured?.name ?? 'Earn your first badge'}</p><p className="mt-1 text-xs text-muted-foreground">{featured?.description ?? 'Open a chapter to begin.'}</p></div>{featured && (profile.achievementsPublic ? <ShareButton title={`BABEL · ${featured.name}`} text={`BABEL · ${account.name}'s badge: ${featured.name} · ${featured.description}`} /> : <span className="text-[10px] text-muted-foreground">Private</span>)}</div></div>
           {account.role === 'publisher' && <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 p-4 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-accent">Publisher Plan</span> — Monthly subscription coming soon. Payment verification is not active in this prototype.</div>}
           {profileNotice && <p className="mt-4 rounded-lg bg-muted p-3 text-xs text-destructive" role="alert">{profileNotice}</p>}
-          <div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => setShowAchievements(!showAchievements)} className="rounded-lg bg-sidebar px-4 py-3 text-xs font-semibold text-sidebar-foreground" data-testid="button-view-all-achievements">{showAchievements ? 'Hide achievements' : 'View all achievements'}</button>{profile.statsPublic ? <ShareButton text={`BABEL · ${stats.chaptersCompleted} chapters completed · ${stats.currentStreak} day reading streak`} /> : <span className="flex items-center justify-center rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground">Stats are private</span>}</div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => setShowAchievements(!showAchievements)} className="rounded-lg bg-sidebar px-4 py-3 text-xs font-semibold text-sidebar-foreground" data-testid="button-view-all-achievements">{showAchievements ? 'Hide achievements' : 'View all achievements'}</button>{profile.statsPublic ? <ShareButton title="BABEL reading progress" text={`BABEL · ${account.name} · ${stats.chaptersCompleted} chapters completed · ${stats.currentStreak} day reading streak · ${stats.readingSeconds ? Math.round(stats.readingSeconds / 3600) : 0}h reading time`} /> : <span className="flex items-center justify-center rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground">Stats are private</span>}</div>
           {showAchievements && <div className="mt-6 space-y-6"><div className="badge-collection-header"><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Your achievements</p><h3 className="mt-2 font-display text-2xl tracking-[-.02em]">Badge collection</h3><p className="mt-1 text-xs text-muted-foreground">Earned badges can be featured. Locked badges show real progress only.</p></div>{(['Reading', 'Streaks', 'Completion', 'Time', 'Exploration', 'Library', 'Special'] as AchievementGroup[]).map((group) => <section key={group}><p className="mb-3 font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">{group}</p><div className="grid gap-3 sm:grid-cols-2">{achievementDefinitions.filter((definition) => definition.group === group).map((definition) => { const progress = progressFor(definition); const isEarned = progress >= definition.target; return <div key={definition.id} className="flex items-center gap-3 rounded-xl border border-border p-3"><BadgeMark title={definition.name} group={group} locked={!isEarned} featured={profile.featuredBadge === definition.id} /><div className="min-w-0 flex-1"><p className="text-xs font-semibold">{definition.name}</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">{definition.description}</p><div className="mt-2 h-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (progress / definition.target) * 100)}%` }} /></div><p className="mt-1 font-mono-ui text-[9px] text-muted-foreground">{Math.min(progress, definition.target)} / {definition.target}</p></div>{isEarned ? <button onClick={() => setProfile({ ...profile, featuredBadge: definition.id })} className="rounded-lg border border-border px-2 py-1 text-[10px] hover:bg-muted" data-testid={`button-feature-badge-${definition.id}`}>{profile.featuredBadge === definition.id ? 'Featured' : 'Feature'}</button> : <span className="text-[10px] text-muted-foreground">Locked</span>}</div>; })}</div></section>)}</div>}
         </section>
         <aside className="space-y-5">
