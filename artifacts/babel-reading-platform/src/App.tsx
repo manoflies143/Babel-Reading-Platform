@@ -1201,7 +1201,15 @@ function App() {
     if (typeof window === 'undefined') return 'light';
     return (localStorage.getItem('babel-theme') as Theme) || 'light';
   });
-  const [account, setAccountState] = useState<Account | null>(() => sessionStorage.getItem('babel-session-verified') === 'true' ? loadStored<Account | null>('babel-account', null) : null);
+  const [account, setAccountState] = useState<Account | null>(() => {
+  const sessionVerified = sessionStorage.getItem('babel-session-verified') === 'true';
+  const storedAccount = loadStored<Account | null>('babel-account', null);
+  if (!sessionVerified || !storedAccount) {
+    sessionStorage.removeItem('babel-session-verified');
+    return null;
+  }
+  return storedAccount;
+});
   const [history, setHistory] = useState<ReadingRecord[]>(() => loadStored<ReadingRecord[]>('babel-history', []));
   const [favorites, setFavorites] = useState<string[]>(() => loadStored<string[]>('babel-favorites', []));
   const [bookmarks, setBookmarks] = useState<string[]>(() => loadStored<string[]>('babel-bookmarks', []));
