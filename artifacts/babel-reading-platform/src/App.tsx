@@ -329,6 +329,38 @@ function saveStored<T>(key: string, value: T) {
 }
 
 const AUTH_TOKEN_KEY = 'babel-auth-token';
+const ACCOUNT_STORAGE_BASE_KEYS = [
+  'babel-history',
+  'babel-favorites',
+  'babel-bookmarks',
+  'babel-reading-preferences',
+  'babel-reading-activity',
+  'babel-profile',
+  'babel-earned-achievements',
+  'babel-accent-customized',
+] as const;
+
+function accountStorageKey(base: string, email: string) {
+  return `${base}:${email.trim().toLowerCase()}`;
+}
+
+function loadAccountStored<T>(base: string, email: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  const scopedKey = accountStorageKey(base, email);
+  const scopedRaw = localStorage.getItem(scopedKey);
+  if (scopedRaw !== null) {
+    try { return JSON.parse(scopedRaw) as T; } catch { return fallback; }
+  }
+  const legacyRaw = localStorage.getItem(base);
+  if (legacyRaw !== null) {
+    try {
+      const legacy = JSON.parse(legacyRaw) as T;
+      localStorage.setItem(scopedKey, JSON.stringify(legacy));
+      return legacy;
+    } catch { return fallback; }
+  }
+  return fallback;
+}
 
 async function authRequest(path: string, init: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
@@ -1101,14 +1133,7 @@ function ProfilePage() {
       }
       const accountDataKeys = [
         'babel-account',
-        'babel-history',
-        'babel-favorites',
-        'babel-bookmarks',
-        'babel-reading-preferences',
-        'babel-reading-activity',
-        'babel-profile',
-        'babel-earned-achievements',
-        'babel-accent-customized',
+        ...ACCOUNT_STORAGE_BASE_KEYS.map((key) => accountStorageKey(key, account.email)),
         AUTH_TOKEN_KEY,
       ];
       setAccount(null);
@@ -1194,16 +1219,18 @@ function App() {
     if (typeof window === 'undefined') return 'light';
     return (localStorage.getItem('babel-theme') as Theme) || 'light';
   });
-  const [account, setAccountState] = useState<Account | null>(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+  const cachedAccount = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     return token ? loadStored<Account | null>('babel-account', null) : null;
-  });
-  const [history, setHistory] = useState<ReadingRecord[]>(() => loadStored<ReadingRecord[]>('babel-history', []));
-  const [favorites, setFavorites] = useState<string[]>(() => loadStored<string[]>('babel-favorites', []));
-  const [bookmarks, setBookmarks] = useState<string[]>(() => loadStored<string[]>('babel-bookmarks', []));
-  const [preferences, setPreferencesState] = useState<ReadingPreferences>(() => ({ ...defaultPreferences, ...loadStored<Partial<ReadingPreferences>>('babel-reading-preferences', {}) }));
-  const [activity, setActivity] = useState<ReadingActivity[]>(() => loadStored<ReadingActivity[]>('babel-reading-activity', []));
-  const [profile, setProfileState] = useState<ProfileSettings>(() => ({ ...defaultProfile, ...loadStored<Partial<ProfileSettings>>('babel-profile', {}) }));
+  }, []);
+  const [account, setAccountState] = useState<Account | null>(cachedAccount);
+  const [history, setHistory] = useState<ReadingRecord[]>(() => cachedAccount ? loadAccountStored('babel-history', cachedAccount.email, []) : loadStored<ReadingRecord[]>('babel-history', []));
+  const [favorites, setFavorites] = useState<string[]>(() => cachedAccount ? loadAccountStored('babel-favorites', cachedAccount.email, []) : loadStored<string[]>('babel-favorites', []));
+  const [bookmarks, setBookmarks] = useState<string[]>(() => cachedAccount ? loadAccountStored('babel-bookmarks', cachedAccount.email, []) : loadStored<string[]>('babel-bookmarks', []));
+  const [preferences, setPreferencesState] = useState<ReadingPreferences>(() => ({ ...defaultPreferences, ...(cachedAccount ? loadAccountStored<Partial<ReadingPreferences>>('babel-reading-preferences', cachedAccount.email, {}) : loadStored<Partial<ReadingPreferences>>('babel-reading-preferences', {})) }));
+  const [activity, setActivity] = useState<ReadingActivity[]>(() => cachedAccount ? loadAccountStored('babel-reading-activity', cachedAccount.email, []) : loadStored<ReadingActivity[]>('babel-reading-activity', []));
+  const [profile, setProfileState] = useState<ProfileSettings>(() => ({ ...defaultProfile, ...(cachedAccount ? loadAccountStored<Partial<ProfileSettings>>('babel-profile', cachedAccount.email, {}) : loadStored<Partial<ProfileSettings>>('babel-profile', {})) }));
   const [achievementNotice, setAchievementNotice] = useState<AchievementDefinition | null>(null);
   useEffect(() => {
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -1221,8 +1248,7 @@ function App() {
         }
         const data = await response.json() as { account: Account };
         if (!cancelled) {
-          setAccountState(data.account);
-          saveStored('babel-account', data.account);
+          setAccount(data.account);
         }
       })
       .catch(() => {
@@ -1235,7 +1261,7 @@ function App() {
     localStorage.setItem('babel-theme', theme);
   }, [theme]);
   useEffect(() => {
-    const customAccent = localStorage.getItem('babel-accent-customized') === 'true';
+    const customAccent = account ? localStorage.getItem(accountStorageKey('babel-accent-customized', account.email)) === 'true' : localStorage.getItem('babel-accent-customized') === 'true';
     if (!customAccent) {
       setPreferencesState((current) => ({ ...current, accentColor: theme === 'dark' ? 'Babel Orange' : 'Babel Blue' }));
     }
@@ -1256,56 +1282,88 @@ function App() {
   const setAccount = (next: Account | null) => {
     setAccountState(next);
     saveStored('babel-account', next);
+    if (!next) {
+      setHistory([]);
+      setFavorites([]);
+      setBookmarks([]);
+      setPreferencesState(defaultPreferences);
+      setActivity([]);
+      setProfileState(defaultProfile);
+      return;
+    }
+    const nextHistory = loadAccountStored<ReadingRecord[]>('babel-history', next.email, []);
+    const nextFavorites = loadAccountStored<string[]>('babel-favorites', next.email, []);
+    const nextBookmarks = loadAccountStored<string[]>('babel-bookmarks', next.email, []);
+    const nextPreferences = { ...defaultPreferences, ...loadAccountStored<Partial<ReadingPreferences>>('babel-reading-preferences', next.email, {}) };
+    const nextActivity = loadAccountStored<ReadingActivity[]>('babel-reading-activity', next.email, []);
+    const nextProfile = { ...defaultProfile, ...loadAccountStored<Partial<ProfileSettings>>('babel-profile', next.email, {}) };
+    setHistory(nextHistory);
+    setFavorites(nextFavorites);
+    setBookmarks(nextBookmarks);
+    setPreferencesState(nextPreferences);
+    setActivity(nextActivity);
+    setProfileState(nextProfile);
+    saveStored(accountStorageKey('babel-history', next.email), nextHistory);
+    saveStored(accountStorageKey('babel-favorites', next.email), nextFavorites);
+    saveStored(accountStorageKey('babel-bookmarks', next.email), nextBookmarks);
+    saveStored(accountStorageKey('babel-reading-preferences', next.email), nextPreferences);
+    saveStored(accountStorageKey('babel-reading-activity', next.email), nextActivity);
+    saveStored(accountStorageKey('babel-profile', next.email), nextProfile);
   };
   const updateHistory = (record: ReadingRecord) => {
     setHistory((current) => {
       const next = [record, ...current.filter((item) => item.novelId !== record.novelId)];
-      saveStored('babel-history', next);
+      if (account) saveStored(accountStorageKey('babel-history', account.email), next);
       return next;
     });
   };
   const removeHistory = (novelId: string) => {
     setHistory((current) => {
       const next = current.filter((item) => item.novelId !== novelId);
-      saveStored('babel-history', next);
+      if (account) saveStored(accountStorageKey('babel-history', account.email), next);
       return next;
     });
   };
   const clearHistory = () => {
     setHistory([]);
-    saveStored('babel-history', []);
+    if (account) saveStored(accountStorageKey('babel-history', account.email), []);
   };
   const toggleFavorite = (novelId: string) => {
     setFavorites((current) => {
       const next = current.includes(novelId) ? current.filter((id) => id !== novelId) : [...current, novelId];
-      saveStored('babel-favorites', next);
+      if (account) saveStored(accountStorageKey('babel-favorites', account.email), next);
       return next;
     });
   };
   const toggleBookmark = (novelId: string) => {
     setBookmarks((current) => {
       const next = current.includes(novelId) ? current.filter((id) => id !== novelId) : [...current, novelId];
-      saveStored('babel-bookmarks', next);
+      if (account) saveStored(accountStorageKey('babel-bookmarks', account.email), next);
       return next;
     });
   };
   const setPreferences = (next: ReadingPreferences) => {
     setPreferencesState(next);
-    saveStored('babel-reading-preferences', next);
-    if (next.accentColor !== preferences.accentColor) localStorage.setItem('babel-accent-customized', 'true');
+    if (account) {
+      saveStored(accountStorageKey('babel-reading-preferences', account.email), next);
+      if (next.accentColor !== preferences.accentColor) localStorage.setItem(accountStorageKey('babel-accent-customized', account.email), 'true');
+    } else {
+      saveStored('babel-reading-preferences', next);
+    }
   };
   const recordReadingSession = (session: Omit<ReadingActivity, 'id'>) => {
     setActivity((current) => {
       const id = `${session.novelId}:${session.chapterId}:${session.startedAt}`;
       if (current.some((item) => item.id === id)) return current;
       const next = [...current, { ...session, id }];
-      saveStored('babel-reading-activity', next);
+      if (account) saveStored(accountStorageKey('babel-reading-activity', account.email), next);
       return next;
     });
   };
   const setProfile = (next: ProfileSettings) => {
     setProfileState(next);
-    saveStored('babel-profile', next);
+    if (account) saveStored(accountStorageKey('babel-profile', account.email), next);
+    else saveStored('babel-profile', next);
   };
   const activityStats = getReadingStats(activity, favorites, bookmarks, [featuredNovel]);
   const serverBadges = getServerBadgeStatus(account);
@@ -1319,10 +1377,10 @@ function App() {
   ];
   const earnedAchievementIds = [...locallyEarnedAchievementIds, ...serverEarnedBadgeIds];
   useEffect(() => {
-    const known = loadStored<string[]>('babel-earned-achievements', []);
+    const known = account ? loadStored<string[]>(accountStorageKey('babel-earned-achievements', account.email), []) : loadStored<string[]>('babel-earned-achievements', []);
     const newlyEarned = earnedAchievementIds.find((id) => !known.includes(id));
     if (newlyEarned) setAchievementNotice(achievementDefinitions.find((definition) => definition.id === newlyEarned) ?? null);
-    if (earnedAchievementIds.join('|') !== known.join('|')) saveStored('babel-earned-achievements', earnedAchievementIds);
+    if (earnedAchievementIds.join('|') !== known.join('|')) saveStored(account ? accountStorageKey('babel-earned-achievements', account.email) : 'babel-earned-achievements', earnedAchievementIds);
   }, [earnedAchievementIds.join('|')]);
   const contextValue: BabelContextValue = {
     account,
