@@ -1086,10 +1086,18 @@ function ProfilePage() {
   const deleteAccount = async () => {
     const confirmed = window.confirm('Delete this Babel account and its account-owned local reading data? This cannot be undone.');
     if (!confirmed) return;
+    const password = window.prompt('For security, enter your current Babel password to confirm account deletion.');
+    if (!password) {
+      setProfileNotice('Account deletion cancelled. Password confirmation is required.');
+      return;
+    }
     try {
-      const response = await authRequest('/account', { method: 'DELETE' });
+      const response = await authRequest('/account', {
+        method: 'DELETE',
+        body: JSON.stringify({ password }),
+      });
       if (!response.ok) {
-        setProfileNotice('Could not delete the account from the server.');
+        setProfileNotice(response.status === 403 ? 'Password confirmation failed. The account was not deleted.' : 'Could not delete the account from the server.');
         return;
       }
       const accountDataKeys = [
