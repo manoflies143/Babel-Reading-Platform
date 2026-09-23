@@ -6,6 +6,14 @@ import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_NAME_LENGTH = 80;
+const MAX_EMAIL_LENGTH = 254;
+const MAX_PASSWORD_LENGTH = 256;
+
+router.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 
 function normalizeEmail(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
@@ -70,7 +78,7 @@ router.post("/auth/register", async (req, res) => {
   const password = String(req.body?.password ?? "");
   const role = req.body?.role === "publisher" ? "publisher" : "reader";
 
-  if (!name || !email.includes("@") || password.length < 8) {
+  if (!name || name.length > MAX_NAME_LENGTH || !email || email.length > MAX_EMAIL_LENGTH || !email.includes("@") || password.length < 8 || password.length > MAX_PASSWORD_LENGTH) {
     return res.status(400).json({ error: "Name, valid email, and password of at least 8 characters are required." });
   }
 
@@ -112,6 +120,9 @@ router.post("/auth/register", async (req, res) => {
 router.post("/auth/login", async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   const password = String(req.body?.password ?? "");
+  if (email.length > MAX_EMAIL_LENGTH || password.length > MAX_PASSWORD_LENGTH) {
+    return res.status(400).json({ error: "Invalid account credentials." });
+  }
   const [account] = await db.select().from(accountsTable).where(and(eq(accountsTable.email, email), isNull(accountsTable.deletedAt))).limit(1);
 
   if (!account || !verifyPassword(password, account.passwordSalt, account.passwordHash)) {
@@ -141,7 +152,7 @@ router.delete("/auth/account", async (req, res) => {
   if (!account) return res.status(401).json({ error: "Session is invalid or expired." });
 
   const password = String(req.body?.password ?? "");
-  if (!password || !verifyPassword(password, account.passwordSalt, account.passwordHash)) {
+  if (password.length > MAX_PASSWORD_LENGTH || !password || !verifyPassword(password, account.passwordSalt, account.passwordHash)) {
     return res.status(403).json({ error: "Password confirmation is required to delete the account." });
   }
 
