@@ -965,7 +965,7 @@ function SettingsPage({ theme, setTheme }: { theme: Theme; setTheme: (theme: The
           <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-7"><h2 className="font-display text-2xl">Reading preferences</h2><p className="mt-1 text-xs text-muted-foreground">Tune the page for the way your eyes like to wander.</p></div><div className="space-y-7"><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Reading mode</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.mode}</span></div>{control('reading-mode', 'mode', ['Vertical Scroll', 'Continuous Reading', 'Swipe/Page Mode', 'Tap Navigation'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Font size</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.fontSize}</span></div>{control('font-size', 'fontSize', ['Small', 'Medium', 'Large', 'Extra large'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Font family</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.fontFamily}</span></div>{control('font-family', 'fontFamily', ['Fraunces', 'DM Sans', 'Georgia', 'System'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Line spacing</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.lineSpacing}</span></div>{control('line-spacing', 'lineSpacing', ['Compact', 'Comfortable', 'Spacious'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Text width</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.textWidth}</span></div>{control('text-width', 'textWidth', ['Narrow', 'Comfortable', 'Wide'])}</div><div><div className="mb-3 flex items-center justify-between"><span className="text-xs font-semibold">Paragraph spacing</span><span className="font-mono-ui text-[10px] text-muted-foreground">{preferences.paragraphSpacing}</span></div>{control('paragraph-spacing', 'paragraphSpacing', ['Tight', 'Comfortable', 'Generous'])}</div></div></section>
           <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-5"><h2 className="font-display text-2xl">Interface</h2><p className="mt-1 text-xs text-muted-foreground">A couple of gentle signals, never more than you need.</p></div><div className="divide-y divide-border"><button onClick={() => setShowProgress(!showProgress)} className="flex w-full items-center justify-between py-4 text-left" data-testid="button-toggle-progress"><span><span className="block text-xs font-semibold">Show reading progress</span><span className="mt-1 block text-[11px] text-muted-foreground">Keep a small marker at the foot of each chapter.</span></span><span className={`flex h-6 w-10 items-center rounded-full p-1 transition-colors ${showProgress ? 'bg-accent' : 'bg-muted'}`}><span className={`h-4 w-4 rounded-full bg-white transition-transform ${showProgress ? 'translate-x-4' : ''}`} /></span></button><button onClick={() => setFocusMode(!focusMode)} className="flex w-full items-center justify-between py-4 text-left" data-testid="button-toggle-focus"><span><span className="block text-xs font-semibold">Focus mode by default</span><span className="mt-1 block text-[11px] text-muted-foreground">Hide surrounding navigation when a chapter opens.</span></span><span className={`flex h-6 w-10 items-center rounded-full p-1 transition-colors ${focusMode ? 'bg-accent' : 'bg-muted'}`}><span className={`h-4 w-4 rounded-full bg-white transition-transform ${focusMode ? 'translate-x-4' : ''}`} /></span></button></div></section>
         </div>
-        <aside className="space-y-5"><div className="rounded-2xl border border-border bg-accent p-5 text-accent-foreground"><Sun size={18} /><p className="mt-8 font-display text-2xl leading-tight">Your reading room should feel like somewhere you want to stay.</p><p className="mt-3 text-xs leading-5 opacity-70">These preferences stay on this device.</p></div><div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-lg">Account</h3><div className="mt-5 space-y-4 text-xs"><div><p className="text-muted-foreground">Signed in as</p><p className="mt-1 font-medium">{account?.name || 'Guest reader'}</p></div><Link href={account ? '/profile' : '/auth'} className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2.5 text-muted-foreground hover:bg-muted" data-testid="button-account-settings">{account ? 'Account settings' : 'Sign in or create account'} <ArrowRight size={14} /></Link>{accountNotice && <p className="rounded-lg bg-muted p-3 text-[11px] leading-5 text-muted-foreground">Your account and reading choices are stored on this device for this prototype.</p>}</div></div><div className="rounded-2xl border border-dashed border-border p-5"><div className="flex items-center gap-2 text-muted-foreground"><Moon size={16} /><span className="font-mono-ui text-[10px] uppercase tracking-[.14em]">More to come</span></div><p className="mt-3 text-xs leading-5 text-muted-foreground">Downloads, offline reading, and protected in-app content are reserved for the dedicated Babel app.</p></div></aside>
+        <aside className="space-y-5"><div className="rounded-2xl border border-border bg-accent p-5 text-accent-foreground"><Sun size={18} /><p className="mt-8 font-display text-2xl leading-tight">Your reading room should feel like somewhere you want to stay.</p><p className="mt-3 text-xs leading-5 opacity-70">These preferences stay on this device.</p></div><div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-lg">Account</h3><div className="mt-5 space-y-4 text-xs"><div><p className="text-muted-foreground">Signed in as</p><p className="mt-1 font-medium">{account?.name || 'Guest reader'}</p></div><Link href={account ? '/profile' : '/auth'} className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2.5 text-muted-foreground hover:bg-muted" data-testid="button-account-settings">{account ? 'Account settings' : 'Sign in or create account'} <ArrowRight size={14} /></Link>{accountNotice && <p className="rounded-lg bg-muted p-3 text-[11px] leading-5 text-muted-foreground">Your signed-in account and reading choices sync to Babel, with a local cache for temporary offline use.</p>}</div></div><div className="rounded-2xl border border-dashed border-border p-5"><div className="flex items-center gap-2 text-muted-foreground"><Moon size={16} /><span className="font-mono-ui text-[10px] uppercase tracking-[.14em]">More to come</span></div><p className="mt-3 text-xs leading-5 text-muted-foreground">Downloads, offline reading, and protected in-app content are reserved for the dedicated Babel app.</p></div></aside>
       </div>
     </div>
   );
@@ -1260,7 +1260,8 @@ function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('babel-theme', theme);
-  }, [theme]);
+    if (account) saveCloudPatch({ theme });
+  }, [theme, account]);
   useEffect(() => {
     const customAccent = account ? localStorage.getItem(accountStorageKey('babel-accent-customized', account.email)) === 'true' : localStorage.getItem('babel-accent-customized') === 'true';
     if (!customAccent) {
@@ -1323,6 +1324,10 @@ function App() {
       if (Array.isArray(data.earnedAchievementIds)) {
         saveStored(accountStorageKey('babel-earned-achievements', next.email), data.earnedAchievementIds);
       }
+      if (data.theme === 'light' || data.theme === 'dark') {
+        setTheme(data.theme);
+        localStorage.setItem(accountStorageKey('babel-theme', next.email), data.theme);
+      }
       if (typeof data.accentCustomized === 'boolean') {
         localStorage.setItem(accountStorageKey('babel-accent-customized', next.email), String(data.accentCustomized));
       }
@@ -1332,8 +1337,17 @@ function App() {
   };
 
   const setAccount = (next: Account | null) => {
+    const previous = account;
     setAccountState(next);
     saveStored('babel-account', next);
+    if (previous && next && previous.email === next.email && previous.name !== next.name) {
+      void authRequest('/me', {
+        method: 'PATCH',
+        body: JSON.stringify({ name: next.name }),
+      }).catch(() => {
+        // Keep the local profile responsive during temporary API outages.
+      });
+    }
     if (!next) {
       setHistory([]);
       setFavorites([]);
@@ -1454,7 +1468,10 @@ function App() {
     const known = account ? loadStored<string[]>(accountStorageKey('babel-earned-achievements', account.email), []) : loadStored<string[]>('babel-earned-achievements', []);
     const newlyEarned = earnedAchievementIds.find((id) => !known.includes(id));
     if (newlyEarned) setAchievementNotice(achievementDefinitions.find((definition) => definition.id === newlyEarned) ?? null);
-    if (earnedAchievementIds.join('|') !== known.join('|')) saveStored(account ? accountStorageKey('babel-earned-achievements', account.email) : 'babel-earned-achievements', earnedAchievementIds);
+    if (earnedAchievementIds.join('|') !== known.join('|')) {
+      saveStored(account ? accountStorageKey('babel-earned-achievements', account.email) : 'babel-earned-achievements', earnedAchievementIds);
+      if (account) saveCloudPatch({ earnedAchievementIds });
+    }
   }, [earnedAchievementIds.join('|')]);
   const contextValue: BabelContextValue = {
     account,
