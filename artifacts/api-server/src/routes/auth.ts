@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { and, count, eq, gt, isNull } from "drizzle-orm";
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { db, accountsTable, sessionsTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
@@ -50,7 +50,7 @@ async function createSession(accountId: number) {
   return token;
 }
 
-async function authenticatedAccount(req: Parameters<IRouter["get"]>[1] extends never ? never : any) {
+async function authenticatedAccount(req: Request) {
   const auth = String(req.headers.authorization ?? "");
   if (!auth.startsWith("Bearer ")) return null;
   const token = auth.slice(7).trim();
