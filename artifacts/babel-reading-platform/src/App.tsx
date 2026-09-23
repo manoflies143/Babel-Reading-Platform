@@ -1112,10 +1112,14 @@ function ProfilePage() {
     reader.readAsDataURL(file);
   };
   const deleteAccount = () => {
-    if (!window.confirm('Delete this local prototype account and its reading data from this device?')) return;
-    // Delete account-owned prototype data, but keep the registration counter so
-    // a founding-reader slot can never be reused on this device.
-    [
+    const confirmed = window.confirm(
+      'Delete this local prototype account and all account-owned reading data from this device? This cannot be undone.'
+    );
+    if (!confirmed) return;
+
+    // Keep the founding-reader registration counter so a deleted account
+    // cannot reclaim a previously assigned founding-reader slot.
+    const accountDataKeys = [
       'babel-account',
       'babel-credential',
       'babel-history',
@@ -1126,16 +1130,18 @@ function ProfilePage() {
       'babel-profile',
       'babel-earned-achievements',
       'babel-accent-customized',
-    ].forEach((key) => localStorage.removeItem(key));
+    ];
+
+    // Clear the in-memory session first, then remove persistent account data.
+    // Do not call App-level state setters that are outside ProfilePage scope.
     sessionStorage.removeItem('babel-session-verified');
     setAccount(null);
     setProfile(defaultProfile);
-    setHistory([]);
-    setFavorites([]);
-    setBookmarks([]);
-    setPreferencesState(defaultPreferences);
-    setActivity([]);
-    setLocation('/auth');
+    accountDataKeys.forEach((key) => localStorage.removeItem(key));
+
+    // Replace the current route so the deleted account cannot remain reachable
+    // through the browser history.
+    setLocation('/auth', { replace: true });
   };
   if (!account) return <AuthPage />;
   return (
