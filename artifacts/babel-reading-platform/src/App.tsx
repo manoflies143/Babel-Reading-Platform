@@ -72,7 +72,7 @@ type Novel = {
   tags: string[];
   language?: string;
   status?: 'Ongoing' | 'Completed';
-  chapters: { id: number; title: string; minutes: number; published: boolean; text?: string }[];
+  chapters: { id: number; title: string; minutes: number; published: boolean; text?: string; headerImage?: string }[];
 };
 
 type ServerBadgeEntitlements = {
@@ -328,13 +328,14 @@ function saveStored<T>(key: string, value: T) {
   if (typeof window !== 'undefined') localStorage.setItem(key, JSON.stringify(value));
 }
 
-async function hashCredential(value: string) {
-  if (typeof crypto === 'undefined' || !crypto.subtle) {
-    throw new Error('Secure credential hashing is unavailable in this browser.');
-  }
-  const data = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+const AUTH_TOKEN_KEY = 'babel-auth-token';
+
+async function authRequest(path: string, init: RequestInit = {}) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+  const headers = new Headers(init.headers);
+  headers.set('Content-Type', 'application/json');
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  return fetch(`/api/auth${path}`, { ...init, headers });
 }
 
 const featuredNovel: Novel = {
@@ -722,8 +723,14 @@ function NovelPage() {
     setPage(0);
     setBookmarkedPosition(false);
     saveReadingPosition(0, next, false);
+    if (preferences.mode === 'Continuous Reading') {
+      window.setTimeout(() => {
+        document.querySelector<HTMLElement>(`[data-continuous-chapter][data-chapter-id="${next.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 0);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
-  const updateMode = (mode: ReadingMode) => setPreferences({ ...preferences, mode });
   const updatePreference = <K extends keyof ReadingPreferences>(key: K, value: ReadingPreferences[K]) => setPreferences({ ...preferences, [key]: value });
   const readerTextStyle = {
     fontSize: preferences.fontSize === 'Small' ? '1.05rem' : preferences.fontSize === 'Large' ? '1.45rem' : preferences.fontSize === 'Extra large' ? '1.7rem' : '1.25rem',
@@ -798,10 +805,10 @@ function NovelPage() {
       <div className="page-enter min-h-[100dvh] px-5 py-6 md:px-10 md:py-10">
         <div className={`mx-auto transition-all ${controlsVisible ? 'max-w-[1080px]' : 'max-w-[860px]'}`}>
           <div className={`mb-8 flex items-center justify-between gap-3 ${controlsVisible ? '' : 'opacity-70'}`}><button onClick={() => { finishReadingSession(); setReading(false); }} className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground" data-testid="button-close-reader"><ArrowLeft size={15} /> Back to details</button><div className="flex items-center gap-2"><span className="hidden font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground sm:inline">{Math.round(progress)}% complete</span><button onClick={() => setControlsVisible((visible) => !visible)} className="rounded-lg border border-border bg-card p-2 text-muted-foreground hover:bg-muted" data-testid="button-toggle-reader-controls" aria-label="Show or hide reader controls">{controlsVisible ? <EyeOff size={15} /> : <Eye size={15} />}</button></div></div>
-          {controlsVisible && <div className="mb-10 rounded-2xl border border-border bg-card p-4 md:p-5"><div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Reading room</p><p className="mt-2 font-display text-xl">{currentChapter.title}</p></div><div className="flex flex-wrap items-center gap-2"><select value={preferences.mode} onChange={(event) => updateMode(event.target.value as ReadingMode)} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-reading-mode">{(['Vertical Scroll', 'Continuous Reading', 'Swipe/Page Mode', 'Tap Navigation'] as ReadingMode[]).map((mode) => <option key={mode}>{mode}</option>)}</select><select value={preferences.fontSize} onChange={(event) => updatePreference('fontSize', event.target.value as FontSize)} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-reader-font-size">{(['Small', 'Medium', 'Large', 'Extra large'] as FontSize[]).map((size) => <option key={size}>{size}</option>)}</select><select value={preferences.fontFamily} onChange={(event) => updatePreference('fontFamily', event.target.value as FontFamily)} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-reader-font-family">{(['Fraunces', 'DM Sans', 'Georgia', 'System'] as FontFamily[]).map((font) => <option key={font}>{font}</option>)}</select><button onClick={() => { const next = !bookmarkedPosition; setBookmarkedPosition(next); toggleBookmark(featuredNovel.id); saveReadingPosition(progress, currentChapter, next); }} className={`inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs ${bookmarkedPosition ? 'border-accent bg-accent/10 text-accent' : 'hover:bg-muted'}`} data-testid="button-reader-bookmark"><Bookmark size={14} fill={bookmarkedPosition ? 'currentColor' : 'none'} />{bookmarkedPosition ? 'Position saved' : 'Bookmark position'}</button></div></div><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} /></div></div>}
+          {controlsVisible && <div className="mb-10 rounded-2xl border border-border bg-card p-4 md:p-5"><div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Reading room</p><p className="mt-2 font-display text-xl">{currentChapter.title}</p></div><div className="flex flex-wrap items-center gap-2"><span className="inline-flex h-9 items-center rounded-lg border border-border bg-muted/50 px-3 font-mono-ui text-[10px] uppercase tracking-[.12em] text-muted-foreground">Mode: {preferences.mode}</span><select value={preferences.fontSize} onChange={(event) => updatePreference('fontSize', event.target.value as FontSize)} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-reader-font-size">{(['Small', 'Medium', 'Large', 'Extra large'] as FontSize[]).map((size) => <option key={size}>{size}</option>)}</select><select value={preferences.fontFamily} onChange={(event) => updatePreference('fontFamily', event.target.value as FontFamily)} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-reader-font-family">{(['Fraunces', 'DM Sans', 'Georgia', 'System'] as FontFamily[]).map((font) => <option key={font}>{font}</option>)}</select><button onClick={() => { const next = !bookmarkedPosition; setBookmarkedPosition(next); toggleBookmark(featuredNovel.id); saveReadingPosition(progress, currentChapter, next); }} className={`inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs ${bookmarkedPosition ? 'border-accent bg-accent/10 text-accent' : 'hover:bg-muted'}`} data-testid="button-reader-bookmark"><Bookmark size={14} fill={bookmarkedPosition ? 'currentColor' : 'none'} />{bookmarkedPosition ? 'Position saved' : 'Bookmark position'}</button></div></div><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} /></div></div>}
           <div className="mb-12 border-b border-border pb-8"><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">{preferences.mode === 'Continuous Reading' ? `${continuousChapters.length} chapters · continuous` : `Chapter ${currentChapter.id} · ${currentChapter.minutes} min`}</p><h1 className="mt-4 font-display text-5xl leading-none tracking-[-.04em] md:text-6xl" data-testid="heading-reading-chapter">{preferences.mode === 'Continuous Reading' ? featuredNovel.title : currentChapter.title}</h1><p className="mt-4 text-sm text-muted-foreground">{featuredNovel.title} · {featuredNovel.author}</p></div>
           <article onClick={handleReaderClick} onTouchStart={(event) => { touchStart.current = event.touches[0].clientX; }} onTouchEnd={handleTouchEnd} className="reader-surface mx-auto cursor-text select-none rounded-2xl px-2 py-4 transition-colors hover:bg-card/40 md:px-8 md:py-8" data-reader-surface data-testid="reader-surface">
-            <div className="reading-rule text-foreground/90" style={readerTextStyle}>{(preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation' ? pages[page].map((paragraph, index) => <p key={`${currentChapter.id}-${page}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>) : preferences.mode === 'Continuous Reading' ? continuousChapters.map(({ chapter, pages: chapterContent }) => <section key={chapter.id} data-continuous-chapter data-chapter-id={chapter.id} className="mb-16 min-h-[55vh]"><p className="mb-6 font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Chapter {chapter.id} · {chapter.title}</p>{chapterContent.flat().map((paragraph, index) => <p key={`${chapter.id}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>)}</section>) : pages.map((pageContent, pageIndex) => <section key={pageIndex}><p className="mb-6 font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Chapter {currentChapter.id} · {currentChapter.title}</p>{pageContent.map((paragraph, index) => <p key={`${currentChapter.id}-${pageIndex}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>)}</section>))}</div>
+            <div className="reading-rule text-foreground/90" style={readerTextStyle}>{(preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation' ? pages[page].map((paragraph, index) => <p key={`${currentChapter.id}-${page}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>) : preferences.mode === 'Continuous Reading' ? continuousChapters.map(({ chapter, pages: chapterContent }) => <section key={chapter.id} data-continuous-chapter data-chapter-id={chapter.id} className="mb-16 min-h-[55vh]">{chapter.headerImage && <img src={chapter.headerImage} alt={`Chapter ${chapter.id}: ${chapter.title}`} className="mb-8 max-h-[520px] w-full rounded-2xl object-cover" />}<p className="mb-6 font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Chapter {chapter.id} · {chapter.title}</p>{chapterContent.flat().map((paragraph, index) => <p key={`${chapter.id}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>)}</section>) : pages.map((pageContent, pageIndex) => <section key={pageIndex}>{pageIndex === 0 && currentChapter.headerImage && <img src={currentChapter.headerImage} alt={`Chapter ${currentChapter.id}: ${currentChapter.title}`} className="mb-8 max-h-[520px] w-full rounded-2xl object-cover" />}<p className="mb-6 font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Chapter {currentChapter.id} · {currentChapter.title}</p>{pageContent.map((paragraph, index) => <p key={`${currentChapter.id}-${pageIndex}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>)}</section>))}</div>
             {(preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation') && <div className="mt-12 flex items-center justify-between border-t border-border pt-5"><button onClick={(event) => { event.stopPropagation(); movePage(-1); }} disabled={page === 0 && currentIndex <= 0} className="inline-flex items-center gap-2 text-xs text-muted-foreground disabled:opacity-30" data-testid="button-reader-previous-page"><ArrowLeft size={14} /> Previous page</button><span className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Page {page + 1} of {pages.length}</span><button onClick={(event) => { event.stopPropagation(); movePage(1); }} disabled={page === pages.length - 1 && currentIndex >= publishedChapters.length - 1} className="inline-flex items-center gap-2 text-xs text-muted-foreground disabled:opacity-30" data-testid="button-reader-next-page">Next page <ArrowRight size={14} /></button></div>}
           </article>
           <div className="mt-14 flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><button onClick={() => changeChapter(-1)} disabled={currentIndex <= 0} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-35" data-testid="button-previous-chapter"><ArrowLeft size={14} /> Previous</button><select value={currentChapter.id} onChange={(event) => openReader(Number(event.target.value))} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-chapter"><option value={currentChapter.id}>{currentChapter.title}</option>{publishedChapters.filter((chapter) => chapter.id !== currentChapter.id).map((chapter) => <option key={chapter.id} value={chapter.id}>Chapter {chapter.id}: {chapter.title}</option>)}</select><button onClick={() => changeChapter(1)} disabled={currentIndex >= publishedChapters.length - 1} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-35" data-testid="button-next-chapter">Next <ArrowRight size={14} /></button></div><span className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">{preferences.mode === 'Continuous Reading' ? 'Scroll through every published chapter' : preferences.mode === 'Vertical Scroll' ? 'Scroll through this chapter' : `Tap the page to ${controlsVisible ? 'hide' : 'show'} controls`}</span></div>
@@ -816,12 +823,12 @@ function NovelPage() {
         <Cover novel={featuredNovel} size="lg" />
         <div className="max-w-2xl pt-1"><div className="flex flex-wrap gap-2">{featuredNovel.genres.map((genre) => <span key={genre} className="rounded-full bg-muted px-3 py-1 font-mono-ui text-[10px] uppercase tracking-[.1em] text-muted-foreground">{genre}</span>)}</div><h1 className="mt-5 font-display text-5xl leading-[.96] tracking-[-.045em] md:text-7xl" data-testid="heading-novel-title">{featuredNovel.title}</h1><p className="mt-4 text-sm text-muted-foreground">by <span className="text-foreground">{featuredNovel.author}</span></p><p className="mt-8 max-w-xl text-base leading-7 text-muted-foreground">{featuredNovel.description}</p><div className="mt-9 flex flex-wrap gap-3"><button onClick={() => openReader()} className="inline-flex items-center gap-2 rounded-lg bg-sidebar px-5 py-3 text-xs font-semibold text-sidebar-foreground hover:opacity-90" data-testid="button-start-reading">Start reading <ArrowRight size={15} /></button><button onClick={() => toggleFavorite(featuredNovel.id)} className={`inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-3 text-xs font-semibold hover:bg-muted ${favorites.includes(featuredNovel.id) ? 'text-accent' : ''}`} data-testid="button-favorite-novel"><Heart size={15} fill={favorites.includes(featuredNovel.id) ? 'currentColor' : 'none'} />{favorites.includes(featuredNovel.id) ? 'Favorited' : 'Favorite'}</button><button onClick={() => toggleBookmark(featuredNovel.id)} className={`inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-3 text-xs font-semibold hover:bg-muted ${bookmarks.includes(featuredNovel.id) ? 'text-accent' : ''}`} data-testid="button-bookmark-novel"><Bookmark size={15} fill={bookmarks.includes(featuredNovel.id) ? 'currentColor' : 'none'} />{bookmarks.includes(featuredNovel.id) ? 'Saved' : 'Bookmark'}</button></div><p className="mt-8 font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">{publishedChapters.length} published {publishedChapters.length === 1 ? 'chapter' : 'chapters'} · {publishedChapters.reduce((total, chapter) => total + chapter.minutes, 0)} min total</p></div>
       </div>
-      <section className="mt-20 max-w-3xl border-t border-border pt-8"><div className="mb-5 flex items-center justify-between"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-muted-foreground">Inside the book</p><h2 className="mt-2 font-display text-3xl">Chapters</h2></div><span className="font-mono-ui text-[10px] text-muted-foreground">{featuredNovel.chapters.length} listed</span></div><div className="divide-y divide-border">{featuredNovel.chapters.map((chapter, index) => <div key={chapter.id} className={`flex items-center gap-4 py-5 ${!chapter.published ? 'opacity-45' : ''}`} data-testid={`row-chapter-${chapter.id}`}><span className="font-mono-ui text-[10px] text-muted-foreground">0{index + 1}</span><div className="flex-1"><p className="text-sm font-medium">{chapter.title}</p><p className="mt-1 font-mono-ui text-[10px] text-muted-foreground">{chapter.published ? `${chapter.minutes} min read` : 'Coming soon'}</p></div>{chapter.published && <button onClick={() => openReader(chapter.id)} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground" data-testid={`button-open-chapter-${chapter.id}`} aria-label={`Read ${chapter.title}`}><ArrowRight size={16} /></button>}</div>)}</div></section>
+      <section className="mt-20 max-w-3xl border-t border-border pt-8"><div className="mb-5 flex items-center justify-between gap-4"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-muted-foreground">Inside the book</p><h2 className="mt-2 font-display text-3xl">Chapters</h2><p className="mt-2 text-xs text-muted-foreground">Clear chapter numbers and titles make it easy to know exactly where you are.</p></div><span className="font-mono-ui text-[10px] text-muted-foreground">{featuredNovel.chapters.length} listed</span></div><div className="space-y-3">{featuredNovel.chapters.map((chapter, index) => <div key={chapter.id} className={`group grid grid-cols-[64px_1fr_auto] items-center gap-4 rounded-2xl border border-border bg-card p-4 transition-all ${chapter.published ? 'hover:border-accent/40 hover:bg-muted/30' : 'opacity-45'}`} data-testid={`row-chapter-${chapter.id}`}><div className="flex h-14 w-14 flex-col items-center justify-center rounded-xl bg-sidebar text-sidebar-foreground"><span className="font-mono-ui text-[8px] uppercase tracking-[.14em] opacity-55">Chapter</span><span className="mt-1 font-display text-xl leading-none">{String(index + 1).padStart(2, '0')}</span></div><div className="min-w-0"><p className="font-display text-lg leading-tight">{chapter.title}</p><p className="mt-1 font-mono-ui text-[10px] text-muted-foreground">{chapter.published ? `${chapter.minutes} min read · Ready to read` : 'Coming soon'}</p></div>{chapter.published && <button onClick={() => openReader(chapter.id)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors group-hover:border-accent/30 group-hover:text-accent" data-testid={`button-open-chapter-${chapter.id}`} aria-label={`Read chapter ${chapter.id}: ${chapter.title}`}><ArrowRight size={16} /></button>}</div>)}</div></section>
     </div>
   );
 }
 
-type DraftChapter = { id: number; number: number; title: string; text: string; status: 'Draft' | 'Published'; };
+type DraftChapter = { id: number; number: number; title: string; text: string; headerImage: string | null; status: 'Draft' | 'Published'; };
 
 function PublisherPage() {
   const [view, setView] = useState<'overview' | 'new'>('overview');
@@ -839,10 +846,11 @@ function PublisherPage() {
   const [manuscript, setManuscript] = useState('');
   const [manuscriptPreview, setManuscriptPreview] = useState(false);
   const [coverAdded, setCoverAdded] = useState(false);
-  const [chapters, setChapters] = useState<DraftChapter[]>([{ id: 1, number: 1, title: 'First light', text: '', status: 'Draft' }]);
+  const [chapters, setChapters] = useState<DraftChapter[]>([{ id: 1, number: 1, title: 'First light', text: '', headerImage: null, status: 'Draft' }]);
   const [newChapter, setNewChapter] = useState('');
   const [newChapterNumber, setNewChapterNumber] = useState('2');
   const [newChapterText, setNewChapterText] = useState('');
+  const [newChapterHeaderImage, setNewChapterHeaderImage] = useState<string | null>(null);
   const [chapterPreview, setChapterPreview] = useState<number | null>(null);
   const [publisherNotice, setPublisherNotice] = useState('');
   const [novelPublished, setNovelPublished] = useState(true);
@@ -850,7 +858,18 @@ function PublisherPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const toggleGenre = (genre: Genre) => setSelectedGenres((current) => current.includes(genre) ? current.filter((item) => item !== genre) : [...current, genre]);
-  const addChapter = () => { if (!newChapter.trim()) return; setChapters((current) => [...current, { id: Date.now(), number: Number(newChapterNumber) || current.length + 1, title: newChapter.trim(), text: newChapterText, status: 'Draft' }]); setNewChapter(''); setNewChapterNumber(String(chapters.length + 2)); setNewChapterText(''); };
+  const addChapter = () => { if (!newChapter.trim()) return; setChapters((current) => [...current, { id: Date.now(), number: Number(newChapterNumber) || current.length + 1, title: newChapter.trim(), text: newChapterText, headerImage: newChapterHeaderImage, status: 'Draft' }]); setNewChapter(''); setNewChapterNumber(String(chapters.length + 2)); setNewChapterText(''); setNewChapterHeaderImage(null); };
+  const selectChapterHeaderImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      setPublisherNotice('Choose a JPG, PNG, or WebP chapter image under 5 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setNewChapterHeaderImage(String(reader.result));
+    reader.readAsDataURL(file);
+  };
   const deleteChapter = (id: number) => setChapters((current) => current.filter((chapter) => chapter.id !== id));
   const saveNovel = () => { setPublisherNotice('Draft saved on this device.'); setView('overview'); };
   const importManuscript = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -876,7 +895,7 @@ function PublisherPage() {
           <div className="space-y-8">
             <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-7 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted font-mono-ui text-xs">01</span><div><h2 className="font-display text-xl">The essentials</h2><p className="text-xs text-muted-foreground">Give the story a name and a way in.</p></div></div><div className="space-y-5"><label className="block"><span className="mb-2 block text-xs font-semibold">Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="The name readers will remember" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-novel-title" /></label><label className="block"><span className="mb-2 block text-xs font-semibold">Author / pen name</span><input value={author} onChange={(event) => setAuthor(event.target.value)} placeholder="Your name or pen name" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-novel-author" /></label><label className="block"><span className="mb-2 block text-xs font-semibold">Description <span className="font-normal text-muted-foreground">(optional)</span></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="A short invitation to the world inside..." rows={4} className="w-full resize-none rounded-lg border border-input bg-background px-3 py-3 text-sm outline-none focus:border-accent" data-testid="textarea-novel-description" /></label><label className="block"><span className="mb-2 block text-xs font-semibold">Tags</span><input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="slow burn, found family, city fantasy" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-novel-tags" /></label><div className="grid gap-4 sm:grid-cols-2"><label className="block"><span className="mb-2 block text-xs font-semibold">Language</span><select value={language} onChange={(event) => setLanguage(event.target.value)} className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="select-novel-language"><option>English</option><option>Filipino</option><option>Japanese</option><option>Other</option></select></label><div><span className="mb-2 block text-xs font-semibold">Status</span><div className="flex gap-2"><button onClick={() => setSeriesStatus('Ongoing')} className={`rounded-lg border px-3 py-2.5 text-xs ${seriesStatus === 'Ongoing' ? 'border-accent bg-accent/10 text-accent' : 'border-border text-muted-foreground'}`} data-testid="button-status-ongoing">Ongoing</button><button onClick={() => setSeriesStatus('Completed')} className={`rounded-lg border px-3 py-2.5 text-xs ${seriesStatus === 'Completed' ? 'border-accent bg-accent/10 text-accent' : 'border-border text-muted-foreground'}`} data-testid="button-status-completed">Completed</button></div></div></div></div></section>
             <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-6 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted font-mono-ui text-xs">02</span><div><h2 className="font-display text-xl">A little context</h2><p className="text-xs text-muted-foreground">Help the right readers find it.</p></div></div><div className="flex flex-wrap gap-2">{genres.filter((item): item is Genre => item !== 'All').map((genre) => <button key={genre} onClick={() => toggleGenre(genre)} className={`rounded-full border px-3 py-2 text-xs transition-colors ${selectedGenres.includes(genre) ? 'border-accent bg-accent text-accent-foreground' : 'border-border text-muted-foreground hover:bg-muted'}`} data-testid={`button-genre-${genre.toLowerCase().replaceAll(' ', '-')}`}>{selectedGenres.includes(genre) && <Check className="mr-1 inline" size={13} />}{genre}</button>)}</div></section>
-            <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-6 flex items-center justify-between"><div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted font-mono-ui text-xs">03</span><div><h2 className="font-display text-xl">Chapters</h2><p className="text-xs text-muted-foreground">Add, edit, preview, and publish each chapter.</p></div></div><span className="font-mono-ui text-[10px] text-muted-foreground">{chapters.length} total</span></div><div className="divide-y divide-border">{chapters.map((chapter, index) => <div className="py-3" key={chapter.id} data-testid={`row-draft-chapter-${chapter.id}`}><div className="flex items-center gap-3"><span className="font-mono-ui text-[10px] text-muted-foreground">{String(chapter.number).padStart(2, '0')}</span>{editingId === chapter.id ? <input autoFocus defaultValue={chapter.title} onBlur={(event) => { setChapters((current) => current.map((item) => item.id === chapter.id ? { ...item, title: event.target.value || item.title } : item)); setEditingId(null); }} className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm outline-none focus:border-accent" data-testid={`input-edit-chapter-${chapter.id}`} /> : <span className="flex-1 text-sm">{chapter.title}</span>}<span className="rounded-full bg-muted px-2 py-1 font-mono-ui text-[9px] text-muted-foreground">{chapter.status}</span><button onClick={() => setChapterPreview(chapterPreview === chapter.id ? null : chapter.id)} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" data-testid={`button-preview-chapter-${chapter.id}`} aria-label="Preview chapter"><Eye size={14} /></button><button onClick={() => setChapters((current) => current.map((item) => item.id === chapter.id ? { ...item, status: item.status === 'Published' ? 'Draft' : 'Published' } : item))} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" data-testid={`button-publish-chapter-${chapter.id}`} aria-label="Publish or unpublish chapter"><Check size={14} /></button><button onClick={() => setEditingId(chapter.id)} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" data-testid={`button-edit-chapter-${chapter.id}`} aria-label="Edit chapter"><Pencil size={14} /></button><button onClick={() => deleteChapter(chapter.id)} className="rounded-md p-2 text-muted-foreground hover:bg-red-50 hover:text-destructive dark:hover:bg-red-950/30" data-testid={`button-delete-chapter-${chapter.id}`} aria-label="Delete chapter"><Trash2 size={14} /></button></div>{chapterPreview === chapter.id && <div className="mt-3 rounded-xl bg-muted/60 p-4 text-xs leading-6 text-muted-foreground">{chapter.text || 'No chapter text yet. Add a chapter manuscript below to preview it.'}</div>}</div>)}</div><div className="mt-5 grid gap-3 sm:grid-cols-[90px_1fr]"><input value={newChapterNumber} onChange={(event) => setNewChapterNumber(event.target.value)} type="number" min="1" placeholder="No." className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-new-chapter-number" /><input value={newChapter} onChange={(event) => setNewChapter(event.target.value)} placeholder="Chapter title" className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-new-chapter" /></div><textarea value={newChapterText} onChange={(event) => setNewChapterText(event.target.value)} placeholder="Write or paste the chapter text here..." rows={5} className="mt-3 w-full resize-y rounded-lg border border-input bg-background px-3 py-3 text-sm outline-none focus:border-accent" data-testid="textarea-new-chapter" /><div className="mt-3 flex flex-wrap gap-2"><button onClick={addChapter} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" data-testid="button-add-chapter"><Plus size={14} /> Add chapter</button><button onClick={() => setPublisherNotice('Chapter draft saved on this device.')} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" data-testid="button-save-chapter-draft"><FileEdit size={14} /> Save draft</button><button onClick={() => setPublisherNotice('Chapter preview is ready above.')} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" data-testid="button-preview-new-chapter"><Eye size={14} /> Preview</button><button onClick={() => setPublisherNotice('Chapter published in this local prototype.')} className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground hover:opacity-90" data-testid="button-publish-new-chapter"><Check size={14} /> Publish</button></div></section>
+            <section className="rounded-2xl border border-border bg-card p-5 md:p-7"><div className="mb-6 flex items-center justify-between"><div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted font-mono-ui text-xs">03</span><div><h2 className="font-display text-xl">Chapters</h2><p className="text-xs text-muted-foreground">Add, edit, preview, and publish each chapter.</p></div></div><span className="font-mono-ui text-[10px] text-muted-foreground">{chapters.length} total</span></div><div className="divide-y divide-border">{chapters.map((chapter, index) => <div className="py-3" key={chapter.id} data-testid={`row-draft-chapter-${chapter.id}`}><div className="flex items-center gap-3"><span className="font-mono-ui text-[10px] text-muted-foreground">{String(chapter.number).padStart(2, '0')}</span>{editingId === chapter.id ? <input autoFocus defaultValue={chapter.title} onBlur={(event) => { setChapters((current) => current.map((item) => item.id === chapter.id ? { ...item, title: event.target.value || item.title } : item)); setEditingId(null); }} className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm outline-none focus:border-accent" data-testid={`input-edit-chapter-${chapter.id}`} /> : <span className="flex-1 text-sm">{chapter.title}</span>}<span className="rounded-full bg-muted px-2 py-1 font-mono-ui text-[9px] text-muted-foreground">{chapter.status}</span><button onClick={() => setChapterPreview(chapterPreview === chapter.id ? null : chapter.id)} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" data-testid={`button-preview-chapter-${chapter.id}`} aria-label="Preview chapter"><Eye size={14} /></button><button onClick={() => setChapters((current) => current.map((item) => item.id === chapter.id ? { ...item, status: item.status === 'Published' ? 'Draft' : 'Published' } : item))} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" data-testid={`button-publish-chapter-${chapter.id}`} aria-label="Publish or unpublish chapter"><Check size={14} /></button><button onClick={() => setEditingId(chapter.id)} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" data-testid={`button-edit-chapter-${chapter.id}`} aria-label="Edit chapter"><Pencil size={14} /></button><button onClick={() => deleteChapter(chapter.id)} className="rounded-md p-2 text-muted-foreground hover:bg-red-50 hover:text-destructive dark:hover:bg-red-950/30" data-testid={`button-delete-chapter-${chapter.id}`} aria-label="Delete chapter"><Trash2 size={14} /></button></div>{chapterPreview === chapter.id && <div className="mt-3 overflow-hidden rounded-xl bg-muted/60">{chapter.headerImage && <img src={chapter.headerImage} alt={`Chapter ${chapter.number}: ${chapter.title} header`} className="max-h-80 w-full object-cover" />}<div className="p-4 text-xs leading-6 text-muted-foreground">{chapter.text || 'No chapter text yet. Add a chapter manuscript below to preview it.'}</div></div>}</div>)}</div><div className="mt-5 grid gap-3 sm:grid-cols-[90px_1fr]"><input value={newChapterNumber} onChange={(event) => setNewChapterNumber(event.target.value)} type="number" min="1" placeholder="No." className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-new-chapter-number" /><input value={newChapter} onChange={(event) => setNewChapter(event.target.value)} placeholder="Chapter title" className="h-10 rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-new-chapter" /></div><div className="mt-3 rounded-xl border border-border bg-muted/30 p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-semibold">Chapter opening image <span className="font-normal text-muted-foreground">(optional)</span></p><p className="mt-1 text-[11px] leading-5 text-muted-foreground">Upload your own title art, illustration, or chapter card. It appears once at the start of this chapter; Babel does not generate it.</p></div><label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-muted"><Upload size={14} /> {newChapterHeaderImage ? 'Replace image' : 'Attach image'}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={selectChapterHeaderImage} className="hidden" data-testid="input-chapter-header-image" /></label></div>{newChapterHeaderImage && <div className="mt-4 overflow-hidden rounded-xl border border-border bg-background"><img src={newChapterHeaderImage} alt="New chapter opening preview" className="max-h-80 w-full object-cover" /><div className="flex items-center justify-between px-3 py-2"><span className="font-mono-ui text-[9px] uppercase tracking-[.12em] text-muted-foreground">Opening image preview</span><button onClick={() => setNewChapterHeaderImage(null)} className="text-[10px] text-muted-foreground hover:text-destructive">Remove</button></div></div>}</div><textarea value={newChapterText} onChange={(event) => setNewChapterText(event.target.value)} placeholder="Write or paste the chapter text here..." rows={5} className="mt-3 w-full resize-y rounded-lg border border-input bg-background px-3 py-3 text-sm outline-none focus:border-accent" data-testid="textarea-new-chapter" /><div className="mt-3 flex flex-wrap gap-2"><button onClick={addChapter} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" data-testid="button-add-chapter"><Plus size={14} /> Add chapter</button><button onClick={() => setPublisherNotice('Chapter draft saved on this device.')} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" data-testid="button-save-chapter-draft"><FileEdit size={14} /> Save draft</button><button onClick={() => setPublisherNotice('Chapter preview is ready above.')} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" data-testid="button-preview-new-chapter"><Eye size={14} /> Preview</button><button onClick={() => setPublisherNotice('Chapter published in this local prototype.')} className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground hover:opacity-90" data-testid="button-publish-new-chapter"><Check size={14} /> Publish</button></div></section>
           </div>
           <div className="space-y-5">
              <section className="rounded-2xl border border-border bg-card p-5"><div className="mb-4 flex items-center justify-between"><h2 className="font-display text-xl">Cover</h2><span className="font-mono-ui text-[10px] text-muted-foreground">Optional</span></div><button onClick={() => setCoverAdded(!coverAdded)} className="flex min-h-[180px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/50 text-center hover:border-accent" data-testid="button-upload-cover">{coverAdded ? <><Check className="mb-3 text-accent" size={22} /><span className="text-xs font-semibold">Cover placeholder added</span><span className="mt-1 text-[11px] text-muted-foreground">Click to replace</span></> : <><Upload className="mb-3 text-muted-foreground" size={22} /><span className="text-xs font-semibold">Upload cover</span><span className="mt-1 text-[11px] text-muted-foreground">JPG or PNG · 1600 × 2400 recommended</span></>}</button></section>
@@ -943,76 +962,30 @@ function AuthPage() {
       setNotice('Enter a valid email address to continue.');
       return;
     }
-    if (password.length < 6) {
-      setNotice('Use a password with at least 6 characters.');
+    if (password.length < 8) {
+      setNotice('Use a password with at least 8 characters.');
       return;
     }
-    const normalizedEmail = email.trim().toLowerCase();
-    let passwordHash: string;
+
+    setNotice('');
     try {
-      passwordHash = await hashCredential(password);
+      const response = await authRequest(mode === 'signin' ? '/login' : '/register', {
+        method: 'POST',
+        body: JSON.stringify(mode === 'signin'
+          ? { email: email.trim().toLowerCase(), password }
+          : { name: name.trim(), email: email.trim().toLowerCase(), password, role }),
+      });
+      const data = await response.json().catch(() => ({})) as { account?: Account; token?: string; error?: string };
+      if (!response.ok || !data.account || !data.token) {
+        setNotice(data.error || 'Could not complete account request.');
+        return;
+      }
+      localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+      setAccount(data.account);
+      setLocation(data.account.role === 'publisher' ? '/publisher' : '/');
     } catch {
-      setNotice('This browser does not support secure credential hashing. Please use a modern browser to continue.');
-      return;
+      setNotice('Babel could not reach the account service. Check that the API and database are running.');
     }
-
-    if (mode === 'signin') {
-      const storedCredential = loadStored<{ email: string; passwordHash?: string; password?: string } | null>('babel-credential', null);
-      const storedAccount = loadStored<Account | null>('babel-account', null);
-      if (!storedCredential || !storedAccount || storedCredential.email !== normalizedEmail) {
-        setNotice('Email or password is incorrect for this device.');
-        return;
-      }
-      const credentialMatches = storedCredential.passwordHash
-        ? storedCredential.passwordHash === passwordHash
-        : storedCredential.password === password;
-      if (!credentialMatches) {
-        setNotice('Email or password is incorrect for this device.');
-        return;
-      }
-      if (!storedCredential.passwordHash) {
-        saveStored('babel-credential', { email: normalizedEmail, passwordHash });
-      }
-      const creatorEmail = String((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_BABEL_CREATOR_EMAIL || '').trim().toLowerCase();
-      const migratedAccount: Account = {
-        ...storedAccount,
-        serverBadgeEntitlements: {
-          ...storedAccount.serverBadgeEntitlements,
-          creator: Boolean(creatorEmail && normalizedEmail === creatorEmail),
-        },
-      };
-      saveStored('babel-account', migratedAccount);
-      sessionStorage.setItem('babel-session-verified', 'true');
-      setAccount(migratedAccount);
-      setLocation(migratedAccount.role === 'publisher' ? '/publisher' : '/');
-      return;
-    }
-
-    if (loadStored<Account | null>('babel-account', null)) {
-      setNotice('A local account already exists on this device. Sign in instead, or delete the local account from Profile before creating another one.');
-      return;
-    }
-
-    const readerCount = loadStored<number>('babel-reader-registration-count', 0);
-    const isReader = role === 'reader';
-    const foundingReaderNumber = isReader && readerCount < 10 ? readerCount + 1 : undefined;
-    if (isReader) saveStored('babel-reader-registration-count', readerCount + 1);
-    const creatorEmail = String((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_BABEL_CREATOR_EMAIL || '').trim().toLowerCase();
-    const nextAccount: Account = {
-      name: name.trim(),
-      email: normalizedEmail,
-      role,
-      createdAt: new Date().toISOString(),
-      emailVerified: false,
-      serverBadgeEntitlements: {
-        creator: Boolean(creatorEmail && normalizedEmail === creatorEmail),
-        ...(foundingReaderNumber ? { foundingReaderNumber } : {}),
-      },
-    };
-    saveStored('babel-credential', { email: normalizedEmail, passwordHash });
-    sessionStorage.setItem('babel-session-verified', 'true');
-    setAccount(nextAccount);
-    setLocation(role === 'publisher' ? '/publisher' : '/');
   };
 
   return (
@@ -1033,15 +1006,15 @@ function AuthPage() {
         <div className="mt-7 space-y-4">
           {mode === 'create' && <label className="block"><span className="mb-2 block text-xs font-semibold">Name</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder="What should we call you?" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-account-name" /></label>}
           <label className="block"><span className="mb-2 block text-xs font-semibold">Email</span><input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="you@example.com" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-account-email" /></label>
-          <label className="block"><span className="mb-2 block text-xs font-semibold">Password</span><input value={password} onChange={(event) => setPassword(event.target.value)} type="password" minLength={6} placeholder="At least 6 characters" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-account-password" /></label>
+          <label className="block"><span className="mb-2 block text-xs font-semibold">Password</span><input value={password} onChange={(event) => setPassword(event.target.value)} type="password" minLength={8} placeholder="At least 8 characters" className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:border-accent" data-testid="input-account-password" /></label>
           {mode === 'create' && <div><span className="mb-2 block text-xs font-semibold">Account type</span><div className="grid gap-2 sm:grid-cols-2"><button onClick={() => setRole('reader')} className={`rounded-xl border p-3 text-left ${role === 'reader' ? 'border-accent bg-accent/10' : 'border-border hover:bg-muted'}`} data-testid="button-role-reader"><User size={16} className="mb-3 text-accent" /><span className="block text-xs font-semibold">Reader account</span><span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Read, save, and return to your place.</span></button><button onClick={() => setRole('publisher')} className={`rounded-xl border p-3 text-left ${role === 'publisher' ? 'border-accent bg-accent/10' : 'border-border hover:bg-muted'}`} data-testid="button-role-publisher"><UserPlus size={16} className="mb-3 text-accent" /><span className="block text-xs font-semibold">Publisher account</span><span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Publish novels and manage chapters.</span></button></div></div>}
           {mode === 'create' && role === 'publisher' && <div className="rounded-xl border border-accent/30 bg-accent/10 p-3 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-accent">Publisher Plan</span> — Monthly subscription coming soon. Publishing tools are available in this prototype without payment.</div>}
           {notice && <p className="rounded-lg bg-muted p-3 text-xs text-destructive" role="alert">{notice}</p>}
           <button onClick={submit} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sidebar px-4 py-3 text-xs font-semibold text-sidebar-foreground hover:opacity-90" data-testid="button-submit-auth">{mode === 'signin' ? <LogIn size={15} /> : <UserPlus size={15} />}{mode === 'signin' ? 'Sign in' : 'Create account'}<ArrowRight size={14} /></button>
         </div>
-        <div className="mt-6 rounded-xl border border-accent/25 bg-accent/10 p-3 text-[11px] leading-5 text-muted-foreground"><span className="font-semibold text-accent">Prototype security:</span> this frontend stores only a SHA-256 password hash and a local signed-in session marker on this device. Real email verification, password reset, OAuth, account linking, and server-backed sessions still require the future authentication service.</div>
+        <div className="mt-6 rounded-xl border border-accent/25 bg-accent/10 p-3 text-[11px] leading-5 text-muted-foreground"><span className="font-semibold text-accent">Account security:</span> registration and sign-in now use Babel's server-backed account service. Email verification, password reset, Google/Facebook OAuth, and account linking still require their provider configuration.</div>
         <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => setNotice('Password reset requires the secure authentication service to be connected.')} className="rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground hover:bg-muted" data-testid="button-password-reset">Forgot password?</button><button onClick={() => setNotice('Email verification requires the secure authentication service to be connected.')} className="rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground hover:bg-muted" data-testid="button-email-verification">Resend verification</button></div>
-        <p className="mt-4 text-center text-[11px] leading-5 text-muted-foreground">This prototype confirms the password locally before creating a signed-in session. It does not claim to verify ownership of the email address.</p>
+        <p className="mt-4 text-center text-[11px] leading-5 text-muted-foreground">Babel does not mark an email as verified until an email-verification provider is connected and the address is confirmed.</p>
       </section>
     </div>
   );
@@ -1111,38 +1084,36 @@ function ProfilePage() {
     reader.onload = () => setProfile({ ...profile, avatar: String(reader.result) });
     reader.readAsDataURL(file);
   };
-  const deleteAccount = () => {
-    const confirmed = window.confirm(
-      'Delete this local prototype account and all account-owned reading data from this device? This cannot be undone.'
-    );
+  const deleteAccount = async () => {
+    const confirmed = window.confirm('Delete this Babel account and its account-owned local reading data? This cannot be undone.');
     if (!confirmed) return;
-
-    // Keep the founding-reader registration counter so a deleted account
-    // cannot reclaim a previously assigned founding-reader slot.
-    const accountDataKeys = [
-      'babel-account',
-      'babel-credential',
-      'babel-history',
-      'babel-favorites',
-      'babel-bookmarks',
-      'babel-reading-preferences',
-      'babel-reading-activity',
-      'babel-profile',
-      'babel-earned-achievements',
-      'babel-accent-customized',
-    ];
-
-    // Clear the in-memory session first, then remove persistent account data.
-    // Do not call App-level state setters that are outside ProfilePage scope.
-    sessionStorage.removeItem('babel-session-verified');
-    setAccount(null);
-    setProfile(defaultProfile);
-    accountDataKeys.forEach((key) => localStorage.removeItem(key));
-
-    // Replace the current route so the deleted account cannot remain reachable
-    // through the browser history.
-    setLocation('/auth');
+    try {
+      const response = await authRequest('/account', { method: 'DELETE' });
+      if (!response.ok) {
+        setProfileNotice('Could not delete the account from the server.');
+        return;
+      }
+      const accountDataKeys = [
+        'babel-account',
+        'babel-history',
+        'babel-favorites',
+        'babel-bookmarks',
+        'babel-reading-preferences',
+        'babel-reading-activity',
+        'babel-profile',
+        'babel-earned-achievements',
+        'babel-accent-customized',
+        AUTH_TOKEN_KEY,
+      ];
+      setAccount(null);
+      setProfile(defaultProfile);
+      accountDataKeys.forEach((key) => localStorage.removeItem(key));
+      setLocation('/auth');
+    } catch {
+      setProfileNotice('Babel could not reach the account service.');
+    }
   };
+
   if (!account) return <AuthPage />;
   return (
     <div className="page-enter mx-auto max-w-[1000px] px-5 py-9 md:px-10 md:py-14">
@@ -1162,9 +1133,9 @@ function ProfilePage() {
           <div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-xl">Your account</h3><div className="mt-5 space-y-2"><Link href="/library" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open my library <ArrowRight size={14} /></Link>{account.role === 'publisher' && <Link href="/publisher" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open publisher desk <ArrowRight size={14} /></Link>}<Link href="/settings" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Reading settings <ArrowRight size={14} /></Link></div></div>
           <div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-xl">Privacy</h3><div className="mt-4 space-y-3"><label className="flex items-center justify-between gap-3 text-xs"><span>Profile public</span><input type="checkbox" checked={profile.profilePublic} onChange={(event) => setProfile({ ...profile, profilePublic: event.target.checked })} /></label><label className="flex items-center justify-between gap-3 text-xs"><span>Stats public</span><input type="checkbox" checked={profile.statsPublic} onChange={(event) => setProfile({ ...profile, statsPublic: event.target.checked })} /></label><label className="flex items-center justify-between gap-3 text-xs"><span>Achievements public</span><input type="checkbox" checked={profile.achievementsPublic} onChange={(event) => setProfile({ ...profile, achievementsPublic: event.target.checked })} /></label><p className="pt-2 text-[11px] leading-5 text-muted-foreground">Sharing uses only the information you choose to share.</p></div></div>
           {creatorBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="The First Tower" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Creator badge</p><p className="mt-2 font-display text-xl">The First Tower</p><p className="mt-1 text-xs text-muted-foreground">Reserved for the securely verified Babel creator identity.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Creator badge</p><p className="mt-3 text-xs leading-5 text-muted-foreground">Reserved for a securely verified creator identity. External authentication configuration is required.</p></div>}
-          {foundingReaderBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="Founding Reader" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Founding reader badge</p><p className="mt-2 font-display text-xl">Founding Reader #{serverBadges.foundingReaderNumber}</p><p className="mt-1 text-xs text-muted-foreground">Prototype badge #{serverBadges.foundingReaderNumber} on this device. Global first-10 assignment will move to the account service.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Founding reader badges</p><p className="mt-3 text-xs leading-5 text-muted-foreground">The first 10 reader numbers will be assigned by the account service at registration and cannot be claimed or changed from the client.</p></div>}
-          <button onClick={deleteAccount} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs text-muted-foreground hover:bg-muted hover:text-destructive" data-testid="button-delete-account"><Trash2 size={14} /> Delete local account</button>
-          <button onClick={() => { sessionStorage.removeItem('babel-session-verified'); setAccount(null); setLocation('/'); }} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground" data-testid="button-logout"><LogOut size={15} /> Log out</button>
+          {foundingReaderBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="Founding Reader" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Founding reader badge</p><p className="mt-2 font-display text-xl">Founding Reader #{serverBadges.foundingReaderNumber}</p><p className="mt-1 text-xs text-muted-foreground">Founding Reader #{serverBadges.foundingReaderNumber} · permanently assigned by Babel at registration.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Founding reader badges</p><p className="mt-3 text-xs leading-5 text-muted-foreground">The first 10 reader accounts receive a permanent founding number from Babel at registration. It cannot be claimed or changed from the client.</p></div>}
+          <button onClick={deleteAccount} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs text-muted-foreground hover:bg-muted hover:text-destructive" data-testid="button-delete-account"><Trash2 size={14} /> Delete account</button>
+          <button onClick={async () => { try { await authRequest('/logout', { method: 'POST' }); } finally { localStorage.removeItem(AUTH_TOKEN_KEY); setAccount(null); setLocation('/'); } }} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground" data-testid="button-logout"><LogOut size={15} /> Log out</button>
         </aside>
       </div>
     </div>
@@ -1218,14 +1189,9 @@ function App() {
     return (localStorage.getItem('babel-theme') as Theme) || 'light';
   });
   const [account, setAccountState] = useState<Account | null>(() => {
-  const sessionVerified = sessionStorage.getItem('babel-session-verified') === 'true';
-  const storedAccount = loadStored<Account | null>('babel-account', null);
-  if (!sessionVerified || !storedAccount) {
-    sessionStorage.removeItem('babel-session-verified');
-    return null;
-  }
-  return storedAccount;
-});
+    const token = typeof window !== 'undefined' ? localStorage.getItem(AUTH_TOKEN_KEY) : null;
+    return token ? loadStored<Account | null>('babel-account', null) : null;
+  });
   const [history, setHistory] = useState<ReadingRecord[]>(() => loadStored<ReadingRecord[]>('babel-history', []));
   const [favorites, setFavorites] = useState<string[]>(() => loadStored<string[]>('babel-favorites', []));
   const [bookmarks, setBookmarks] = useState<string[]>(() => loadStored<string[]>('babel-bookmarks', []));
@@ -1233,6 +1199,31 @@ function App() {
   const [activity, setActivity] = useState<ReadingActivity[]>(() => loadStored<ReadingActivity[]>('babel-reading-activity', []));
   const [profile, setProfileState] = useState<ProfileSettings>(() => ({ ...defaultProfile, ...loadStored<Partial<ProfileSettings>>('babel-profile', {}) }));
   const [achievementNotice, setAchievementNotice] = useState<AchievementDefinition | null>(null);
+  useEffect(() => {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) return;
+    let cancelled = false;
+    authRequest('/me')
+      .then(async (response) => {
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            saveStored('babel-account', null);
+            if (!cancelled) setAccountState(null);
+          }
+          return;
+        }
+        const data = await response.json() as { account: Account };
+        if (!cancelled) {
+          setAccountState(data.account);
+          saveStored('babel-account', data.account);
+        }
+      })
+      .catch(() => {
+        // Keep cached account data available during temporary offline/API outages.
+      });
+    return () => { cancelled = true; };
+  }, []);
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('babel-theme', theme);
