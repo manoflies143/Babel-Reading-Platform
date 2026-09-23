@@ -139,8 +139,19 @@ router.post("/auth/logout", async (req, res) => {
 router.delete("/auth/account", async (req, res) => {
   const account = await authenticatedAccount(req);
   if (!account) return res.status(401).json({ error: "Session is invalid or expired." });
-  await db.update(accountsTable).set({ deletedAt: new Date() }).where(eq(accountsTable.id, account.id));
-  await db.delete(sessionsTable).where(eq(sessionsTable.accountId, account.id));
+
+  const password = String(req.body?.password ?? "");
+  if (!password || !verifyPassword(password, account.passwordSalt, account.passwordHash)) {
+    return res.status(403).json({ error: "Password confirmation is required to delete the account." });
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.update(accountsTable)
+      .set({ deletedAt: new Date() })
+      .where(eq(accountsTable.id, account.id));
+    await tx.delete(sessionsTable).where(eq(sessionsTable.accountId, account.id));
+  });
+
   return res.status(204).end();
 });
 
