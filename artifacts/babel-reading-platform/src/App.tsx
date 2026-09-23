@@ -1109,6 +1109,7 @@ function ProfilePage() {
     // Remove this device's credential and session. Keep the registration counter
     // untouched so a founding-reader slot can never be reused.
     localStorage.removeItem('babel-credential');
+    sessionStorage.removeItem('babel-session-verified');
     setAccount(null);
     setProfile(defaultProfile);
     setLocation('/auth');
@@ -1134,7 +1135,7 @@ function ProfilePage() {
           {creatorBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="The First Tower" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Creator badge</p><p className="mt-2 font-display text-xl">The First Tower</p><p className="mt-1 text-xs text-muted-foreground">Reserved for the securely verified Babel creator identity.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Creator badge</p><p className="mt-3 text-xs leading-5 text-muted-foreground">Reserved for a securely verified creator identity. External authentication configuration is required.</p></div>}
           {foundingReaderBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="Founding Reader" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Founding reader badge</p><p className="mt-2 font-display text-xl">Founding Reader #{serverBadges.foundingReaderNumber}</p><p className="mt-1 text-xs text-muted-foreground">Assigned by Babel when your account was among the first 10 registered readers.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Founding reader badges</p><p className="mt-3 text-xs leading-5 text-muted-foreground">The first 10 reader numbers will be assigned by the account service at registration and cannot be claimed or changed from the client.</p></div>}
           <button onClick={deleteAccount} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs text-muted-foreground hover:bg-muted hover:text-destructive" data-testid="button-delete-account"><Trash2 size={14} /> Delete local account</button>
-          <button onClick={() => { setAccount(null); setLocation('/'); }} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground" data-testid="button-logout"><LogOut size={15} /> Log out</button>
+          <button onClick={() => { sessionStorage.removeItem('babel-session-verified'); setAccount(null); setLocation('/'); }} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground" data-testid="button-logout"><LogOut size={15} /> Log out</button>
         </aside>
       </div>
     </div>
@@ -1171,7 +1172,7 @@ function App() {
     if (typeof window === 'undefined') return 'light';
     return (localStorage.getItem('babel-theme') as Theme) || 'light';
   });
-  const [account, setAccountState] = useState<Account | null>(() => loadStored<Account | null>('babel-account', null));
+  const [account, setAccountState] = useState<Account | null>(() => sessionStorage.getItem('babel-session-verified') === 'true' ? loadStored<Account | null>('babel-account', null) : null);
   const [history, setHistory] = useState<ReadingRecord[]>(() => loadStored<ReadingRecord[]>('babel-history', []));
   const [favorites, setFavorites] = useState<string[]>(() => loadStored<string[]>('babel-favorites', []));
   const [bookmarks, setBookmarks] = useState<string[]>(() => loadStored<string[]>('babel-bookmarks', []));
