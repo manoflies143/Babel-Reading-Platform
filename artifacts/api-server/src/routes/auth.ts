@@ -139,6 +139,20 @@ router.get("/auth/me", async (req, res) => {
   return res.json({ account: publicAccount(account) });
 });
 
+router.patch("/auth/me", async (req, res) => {
+  const account = await authenticatedAccount(req);
+  if (!account) return res.status(401).json({ error: "Session is invalid or expired." });
+  const name = String(req.body?.name ?? "").trim();
+  if (!name || name.length > MAX_NAME_LENGTH) {
+    return res.status(400).json({ error: "Name is required and must be 80 characters or fewer." });
+  }
+  const [updated] = await db.update(accountsTable)
+    .set({ name })
+    .where(eq(accountsTable.id, account.id))
+    .returning();
+  return res.json({ account: publicAccount(updated) });
+});
+
 router.get("/auth/data", async (req, res) => {
   const account = await authenticatedAccount(req);
   if (!account) return res.status(401).json({ error: "Session is invalid or expired." });
