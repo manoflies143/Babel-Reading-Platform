@@ -1117,6 +1117,7 @@ function ProfilePage() {
     reader.readAsDataURL(file);
   };
   const deleteAccount = async () => {
+    if (!account) return;
     const confirmed = window.confirm('Delete this Babel account and its account-owned local reading data? This cannot be undone.');
     if (!confirmed) return;
     const password = window.prompt('For security, enter your Babel password to confirm account deletion.');
