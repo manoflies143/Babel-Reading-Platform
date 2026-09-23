@@ -949,8 +949,17 @@ function AuthPage() {
         setNotice('No local account was found on this device.');
         return;
       }
-      setAccount(storedAccount);
-      setLocation(storedAccount.role === 'publisher' ? '/publisher' : '/');
+      const creatorEmail = String((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_BABEL_CREATOR_EMAIL || '').trim().toLowerCase();
+      const migratedAccount: Account = {
+        ...storedAccount,
+        serverBadgeEntitlements: {
+          ...storedAccount.serverBadgeEntitlements,
+          creator: Boolean(creatorEmail && normalizedEmail === creatorEmail),
+        },
+      };
+      saveStored('babel-account', migratedAccount);
+      setAccount(migratedAccount);
+      setLocation(migratedAccount.role === 'publisher' ? '/publisher' : '/');
       return;
     }
     const readerCount = loadStored<number>('babel-reader-registration-count', 0);
