@@ -86,8 +86,7 @@ type Account = {
   role: AccountRole;
   createdAt: string;
   emailVerified?: boolean;
-  // Badge entitlements are intended to become backend-authoritative.
-  // In this frontend-only prototype they are stored locally and are not globally authoritative.
+  // Badge entitlements come from the server and are not claimable from the client.
   serverBadgeEntitlements?: ServerBadgeEntitlements;
 };
 
