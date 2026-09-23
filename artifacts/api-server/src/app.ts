@@ -19,7 +19,8 @@ async function ensureAuthSchema() {
       "CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_unique ON accounts (email);" +
       "CREATE UNIQUE INDEX IF NOT EXISTS accounts_founding_reader_unique ON accounts (founding_reader_number) WHERE founding_reader_number IS NOT NULL;" +
       "CREATE TABLE IF NOT EXISTS sessions (id SERIAL PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, token_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), expires_at TIMESTAMPTZ NOT NULL);" +
-      "CREATE UNIQUE INDEX IF NOT EXISTS sessions_token_hash_unique ON sessions (token_hash);"
+      "CREATE UNIQUE INDEX IF NOT EXISTS sessions_token_hash_unique ON sessions (token_hash);" +
+      "CREATE TABLE IF NOT EXISTS account_data (account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE, data JSONB NOT NULL DEFAULT '{}'::jsonb, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());"
     ));
   })();
   try {
