@@ -1,4 +1,6 @@
 import express, { type Express } from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import cors from "cors";
@@ -62,5 +64,17 @@ app.use("/api/auth", async (_req, res, next) => {
 });
 
 app.use("/api", router);
+
+// Serve the built Babel frontend from the same production process as the API.
+// This keeps /api/auth/* and the reader UI on one origin in deployments.
+const frontendDist = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../babel-reading-platform/dist/public",
+);
+app.use(express.static(frontendDist));
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/")) return next();
+  return res.sendFile(path.join(frontendDist, "index.html"));
+});
 
 export default app;
