@@ -327,6 +327,15 @@ function saveStored<T>(key: string, value: T) {
   if (typeof window !== 'undefined') localStorage.setItem(key, JSON.stringify(value));
 }
 
+async function hashCredential(value: string) {
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const data = new TextEncoder().encode(value);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+  return value;
+}
+
 const featuredNovel: Novel = {
   id: 'atlas-of-small-hours',
   title: 'The Atlas of Small Hours',
@@ -924,7 +933,7 @@ function AuthPage() {
     return <ProfilePage />;
   }
 
-  const submit = () => {
+  const submit = async () => {
     if (mode === 'create' && !name.trim()) {
       setNotice('Add a name so your reading room knows who to welcome.');
       return;
@@ -938,16 +947,24 @@ function AuthPage() {
       return;
     }
     const normalizedEmail = email.trim().toLowerCase();
+    const passwordHash = await hashCredential(password);
+
     if (mode === 'signin') {
-      const storedCredential = loadStored<{ email: string; password: string } | null>('babel-credential', null);
-      if (!storedCredential || storedCredential.email !== normalizedEmail || storedCredential.password !== password) {
+      const storedCredential = loadStored<{ email: string; passwordHash?: string; password?: string } | null>('babel-credential', null);
+      const storedAccount = loadStored<Account | null>('babel-account', null);
+      if (!storedCredential || !storedAccount || storedCredential.email !== normalizedEmail) {
         setNotice('Email or password is incorrect for this device.');
         return;
       }
-      const storedAccount = loadStored<Account | null>('babel-account', null);
-      if (!storedAccount) {
-        setNotice('No local account was found on this device.');
+      const credentialMatches = storedCredential.passwordHash
+        ? storedCredential.passwordHash === passwordHash
+        : storedCredential.password === password;
+      if (!credentialMatches) {
+        setNotice('Email or password is incorrect for this device.');
         return;
+      }
+      if (!storedCredential.passwordHash) {
+        saveStored('babel-credential', { email: normalizedEmail, passwordHash });
       }
       const creatorEmail = String((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_BABEL_CREATOR_EMAIL || '').trim().toLowerCase();
       const migratedAccount: Account = {
@@ -958,10 +975,17 @@ function AuthPage() {
         },
       };
       saveStored('babel-account', migratedAccount);
+      sessionStorage.setItem('babel-session-verified', 'true');
       setAccount(migratedAccount);
       setLocation(migratedAccount.role === 'publisher' ? '/publisher' : '/');
       return;
     }
+
+    if (loadStored<Account | null>('babel-account', null)) {
+      setNotice('A local account already exists on this device. Sign in instead, or delete the local account from Profile before creating another one.');
+      return;
+    }
+
     const readerCount = loadStored<number>('babel-reader-registration-count', 0);
     const isReader = role === 'reader';
     const foundingReaderNumber = isReader && readerCount < 10 ? readerCount + 1 : undefined;
@@ -978,7 +1002,8 @@ function AuthPage() {
         ...(foundingReaderNumber ? { foundingReaderNumber } : {}),
       },
     };
-    saveStored('babel-credential', { email: normalizedEmail, password });
+    saveStored('babel-credential', { email: normalizedEmail, passwordHash });
+    sessionStorage.setItem('babel-session-verified', 'true');
     setAccount(nextAccount);
     setLocation(role === 'publisher' ? '/publisher' : '/');
   };
@@ -1007,9 +1032,9 @@ function AuthPage() {
           {notice && <p className="rounded-lg bg-muted p-3 text-xs text-destructive" role="alert">{notice}</p>}
           <button onClick={submit} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sidebar px-4 py-3 text-xs font-semibold text-sidebar-foreground hover:opacity-90" data-testid="button-submit-auth">{mode === 'signin' ? <LogIn size={15} /> : <UserPlus size={15} />}{mode === 'signin' ? 'Sign in' : 'Create account'}<ArrowRight size={14} /></button>
         </div>
-        <div className="mt-6 rounded-xl border border-accent/25 bg-accent/10 p-3 text-[11px] leading-5 text-muted-foreground"><span className="font-semibold text-accent">External configuration required:</span> secure email/password login, password reset, email verification, Google/Facebook sign-in, account linking, and server-backed account deletion are not enabled in this frontend-only prototype. No external passwords are stored.</div>
+        <div className="mt-6 rounded-xl border border-accent/25 bg-accent/10 p-3 text-[11px] leading-5 text-muted-foreground"><span className="font-semibold text-accent">Prototype security:</span> this frontend stores only a SHA-256 password hash and a local signed-in session marker on this device. Real email verification, password reset, OAuth, account linking, and server-backed sessions still require the future authentication service.</div>
         <div className="mt-3 flex flex-wrap gap-2"><button onClick={() => setNotice('Password reset requires the secure authentication service to be connected.')} className="rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground hover:bg-muted" data-testid="button-password-reset">Forgot password?</button><button onClick={() => setNotice('Email verification requires the secure authentication service to be connected.')} className="rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground hover:bg-muted" data-testid="button-email-verification">Resend verification</button></div>
-        <p className="mt-4 text-center text-[11px] leading-5 text-muted-foreground">Local prototype sessions stay on this device until account services are connected.</p>
+        <p className="mt-4 text-center text-[11px] leading-5 text-muted-foreground">This prototype confirms the password locally before creating a signed-in session. It does not claim to verify ownership of the email address.</p>
       </section>
     </div>
   );
