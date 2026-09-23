@@ -29,10 +29,10 @@ A responsive novel and light novel reading platform with discovery, personal lib
 
 ## Architecture decisions
 
-- The first release is frontend-only with local state and minimal illustrative content; backend persistence can be added after the reading and publishing workflows are validated.
+- Account registration, login, sessions, deletion, creator entitlement checks, and founding-reader numbering use the Express/PostgreSQL backend. Reading/library/publisher content is still partly local until its server models are added.
 - Wouter handles the app routes so the full surface remains lightweight and works under the root artifact path.
-- Theme and reading preferences are owned by Settings, keeping the main reading navigation focused.
-- The publisher area is deliberately a structured UI shell; PDF import and file processing are placeholders until the publishing model is defined.
+- Theme and reading-mode preferences are owned by Settings; the reader shows the active mode but does not change it in-book.
+- The publisher area supports chapter metadata, text, and optional publisher-supplied chapter-opening images in the UI; persistent novel/chapter/media storage still needs backend models and object storage.
 
 ## Product
 
@@ -40,7 +40,7 @@ A responsive novel and light novel reading platform with discovery, personal lib
 - Discover supports client-side search and genre filtering.
 - Library separates favorites, reading history, continue reading, and bookmarks with empty states.
 - Publisher desk includes add-novel metadata, manuscript, cover/PDF placeholders, and chapter management surfaces.
-- Settings includes day/night theme selection, font sizing, text spacing, reading toggles, and account placeholders.
+- Settings includes day/night theme selection, reading mode, font sizing, text spacing, and accent customization.
 - Novel detail and chapter reader views are wired for the sample story and ready for manually added content.
 
 ## User preferences
