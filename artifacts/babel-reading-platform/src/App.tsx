@@ -86,7 +86,8 @@ type Account = {
   role: AccountRole;
   createdAt: string;
   emailVerified?: boolean;
-  // Backend-authoritative badge data. The frontend must never calculate or accept these values from user input.
+  // Badge entitlements are intended to become backend-authoritative.
+  // In this frontend-only prototype they are stored locally and are not globally authoritative.
   serverBadgeEntitlements?: ServerBadgeEntitlements;
 };
 
@@ -328,12 +329,12 @@ function saveStored<T>(key: string, value: T) {
 }
 
 async function hashCredential(value: string) {
-  if (typeof crypto !== 'undefined' && crypto.subtle) {
-    const data = new TextEncoder().encode(value);
-    const digest = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    throw new Error('Secure credential hashing is unavailable in this browser.');
   }
-  return value;
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 const featuredNovel: Novel = {
@@ -947,7 +948,13 @@ function AuthPage() {
       return;
     }
     const normalizedEmail = email.trim().toLowerCase();
-    const passwordHash = await hashCredential(password);
+    let passwordHash: string;
+    try {
+      passwordHash = await hashCredential(password);
+    } catch {
+      setNotice('This browser does not support secure credential hashing. Please use a modern browser to continue.');
+      return;
+    }
 
     if (mode === 'signin') {
       const storedCredential = loadStored<{ email: string; passwordHash?: string; password?: string } | null>('babel-credential', null);
@@ -1105,13 +1112,29 @@ function ProfilePage() {
     reader.readAsDataURL(file);
   };
   const deleteAccount = () => {
-    if (!window.confirm('Delete this local prototype account from this device?')) return;
-    // Remove this device's credential and session. Keep the registration counter
-    // untouched so a founding-reader slot can never be reused.
-    localStorage.removeItem('babel-credential');
+    if (!window.confirm('Delete this local prototype account and its reading data from this device?')) return;
+    // Delete account-owned prototype data, but keep the registration counter so
+    // a founding-reader slot can never be reused on this device.
+    [
+      'babel-account',
+      'babel-credential',
+      'babel-history',
+      'babel-favorites',
+      'babel-bookmarks',
+      'babel-reading-preferences',
+      'babel-reading-activity',
+      'babel-profile',
+      'babel-earned-achievements',
+      'babel-accent-customized',
+    ].forEach((key) => localStorage.removeItem(key));
     sessionStorage.removeItem('babel-session-verified');
     setAccount(null);
     setProfile(defaultProfile);
+    setHistory([]);
+    setFavorites([]);
+    setBookmarks([]);
+    setPreferencesState(defaultPreferences);
+    setActivity([]);
     setLocation('/auth');
   };
   if (!account) return <AuthPage />;
@@ -1133,7 +1156,7 @@ function ProfilePage() {
           <div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-xl">Your account</h3><div className="mt-5 space-y-2"><Link href="/library" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open my library <ArrowRight size={14} /></Link>{account.role === 'publisher' && <Link href="/publisher" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open publisher desk <ArrowRight size={14} /></Link>}<Link href="/settings" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Reading settings <ArrowRight size={14} /></Link></div></div>
           <div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-xl">Privacy</h3><div className="mt-4 space-y-3"><label className="flex items-center justify-between gap-3 text-xs"><span>Profile public</span><input type="checkbox" checked={profile.profilePublic} onChange={(event) => setProfile({ ...profile, profilePublic: event.target.checked })} /></label><label className="flex items-center justify-between gap-3 text-xs"><span>Stats public</span><input type="checkbox" checked={profile.statsPublic} onChange={(event) => setProfile({ ...profile, statsPublic: event.target.checked })} /></label><label className="flex items-center justify-between gap-3 text-xs"><span>Achievements public</span><input type="checkbox" checked={profile.achievementsPublic} onChange={(event) => setProfile({ ...profile, achievementsPublic: event.target.checked })} /></label><p className="pt-2 text-[11px] leading-5 text-muted-foreground">Sharing uses only the information you choose to share.</p></div></div>
           {creatorBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="The First Tower" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Creator badge</p><p className="mt-2 font-display text-xl">The First Tower</p><p className="mt-1 text-xs text-muted-foreground">Reserved for the securely verified Babel creator identity.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Creator badge</p><p className="mt-3 text-xs leading-5 text-muted-foreground">Reserved for a securely verified creator identity. External authentication configuration is required.</p></div>}
-          {foundingReaderBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="Founding Reader" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Founding reader badge</p><p className="mt-2 font-display text-xl">Founding Reader #{serverBadges.foundingReaderNumber}</p><p className="mt-1 text-xs text-muted-foreground">Assigned by Babel when your account was among the first 10 registered readers.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Founding reader badges</p><p className="mt-3 text-xs leading-5 text-muted-foreground">The first 10 reader numbers will be assigned by the account service at registration and cannot be claimed or changed from the client.</p></div>}
+          {foundingReaderBadge ? <div className="rounded-2xl border border-accent/40 bg-accent/10 p-5"><div className="flex items-center gap-3"><BadgeMark title="Founding Reader" group="Special" featured /><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Founding reader badge</p><p className="mt-2 font-display text-xl">Founding Reader #{serverBadges.foundingReaderNumber}</p><p className="mt-1 text-xs text-muted-foreground">Prototype badge #{serverBadges.foundingReaderNumber} on this device. Global first-10 assignment will move to the account service.</p></div></div></div> : <div className="rounded-2xl border border-dashed border-border p-5"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Founding reader badges</p><p className="mt-3 text-xs leading-5 text-muted-foreground">The first 10 reader numbers will be assigned by the account service at registration and cannot be claimed or changed from the client.</p></div>}
           <button onClick={deleteAccount} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs text-muted-foreground hover:bg-muted hover:text-destructive" data-testid="button-delete-account"><Trash2 size={14} /> Delete local account</button>
           <button onClick={() => { sessionStorage.removeItem('babel-session-verified'); setAccount(null); setLocation('/'); }} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground" data-testid="button-logout"><LogOut size={15} /> Log out</button>
         </aside>
