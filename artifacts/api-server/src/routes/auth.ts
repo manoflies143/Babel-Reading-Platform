@@ -42,7 +42,7 @@ function publicAccount(account: typeof accountsTable.$inferSelect) {
     createdAt: account.createdAt.toISOString(),
     emailVerified: account.emailVerified,
     serverBadgeEntitlements: {
-      creator: Boolean(account.emailVerified && creatorEmail && account.email === creatorEmail),
+      creator: Boolean(creatorEmail && account.email === creatorEmail),
       ...(account.foundingReaderNumber ? { foundingReaderNumber: account.foundingReaderNumber } : {}),
     },
   };
