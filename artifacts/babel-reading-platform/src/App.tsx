@@ -751,26 +751,34 @@ function NovelPage() {
   }, [reading, progress, chapterId, bookmarkedPosition]);
   useEffect(() => {
     if (!reading || preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation') return;
+    let ticking = false;
     const handleScroll = () => {
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      if (maxScroll <= 0) return;
-      if (preferences.mode === 'Continuous Reading') {
-        const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-continuous-chapter]'));
-        let activeIndex = 0;
-        const activationLine = window.innerHeight * 0.35;
-        sections.forEach((section, index) => { if (section.getBoundingClientRect().top <= activationLine) activeIndex = index; });
-        const activeChapter = publishedChapters[activeIndex];
-        if (activeChapter && activeChapter.id !== chapterId) {
-          finishReadingSession(true, false);
-          sessionStartedAt.current = Date.now();
-          setChapterId(activeChapter.id);
-          setPage(0);
-          setBookmarkedPosition(false);
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        ticking = false;
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        if (preferences.mode === 'Continuous Reading') {
+          const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-continuous-chapter]'));
+          const activationLine = window.innerHeight * 0.35;
+          let activeIndex = 0;
+          sections.forEach((section, index) => {
+            if (section.getBoundingClientRect().top <= activationLine) activeIndex = index;
+          });
+          const activeChapter = publishedChapters[activeIndex];
+          if (activeChapter && activeChapter.id !== chapterId) {
+            finishReadingSession(true, false);
+            sessionStartedAt.current = Date.now();
+            setChapterId(activeChapter.id);
+            setPage(0);
+            setBookmarkedPosition(false);
+            saveReadingPosition(0, activeChapter, false);
+          }
         }
-      }
-      const nextProgress = Math.min(100, Math.round((window.scrollY / maxScroll) * 100));
-      setProgress(nextProgress);
-      if (nextProgress >= 100) finishReadingSession(true, preferences.mode === 'Continuous Reading');
+        const nextProgress = Math.min(100, Math.round((window.scrollY / maxScroll) * 100));
+        setProgress(nextProgress);
+        if (nextProgress >= 100) finishReadingSession(true, preferences.mode === 'Continuous Reading');
+      });
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
