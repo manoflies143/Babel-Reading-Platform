@@ -1280,6 +1280,57 @@ function App() {
     document.documentElement.style.setProperty('--accent-foreground', selected.foreground);
     document.documentElement.style.setProperty('--ring', selected.value);
   }, [preferences.accentColor]);
+  const saveCloudPatch = (patch: Record<string, unknown>) => {
+    if (!account) return;
+    void authRequest('/data', {
+      method: 'PUT',
+      body: JSON.stringify({ data: patch }),
+    }).catch(() => {
+      // Local account-scoped cache remains available if the server is temporarily offline.
+    });
+  };
+
+  const hydrateAccountFromCloud = async (next: Account) => {
+    try {
+      const response = await authRequest('/data');
+      if (!response.ok) return;
+      const payload = await response.json() as { data?: Record<string, unknown> };
+      const data = payload.data ?? {};
+      if (Array.isArray(data.history)) {
+        const value = data.history as ReadingRecord[];
+        setHistory(value); saveStored(accountStorageKey('babel-history', next.email), value);
+      }
+      if (Array.isArray(data.favorites)) {
+        const value = data.favorites as string[];
+        setFavorites(value); saveStored(accountStorageKey('babel-favorites', next.email), value);
+      }
+      if (Array.isArray(data.bookmarks)) {
+        const value = data.bookmarks as string[];
+        setBookmarks(value); saveStored(accountStorageKey('babel-bookmarks', next.email), value);
+      }
+      if (data.preferences && typeof data.preferences === 'object') {
+        const value = { ...defaultPreferences, ...(data.preferences as Partial<ReadingPreferences>) };
+        setPreferencesState(value); saveStored(accountStorageKey('babel-reading-preferences', next.email), value);
+      }
+      if (Array.isArray(data.activity)) {
+        const value = data.activity as ReadingActivity[];
+        setActivity(value); saveStored(accountStorageKey('babel-reading-activity', next.email), value);
+      }
+      if (data.profile && typeof data.profile === 'object') {
+        const value = { ...defaultProfile, ...(data.profile as Partial<ProfileSettings>) };
+        setProfileState(value); saveStored(accountStorageKey('babel-profile', next.email), value);
+      }
+      if (Array.isArray(data.earnedAchievementIds)) {
+        saveStored(accountStorageKey('babel-earned-achievements', next.email), data.earnedAchievementIds);
+      }
+      if (typeof data.accentCustomized === 'boolean') {
+        localStorage.setItem(accountStorageKey('babel-accent-customized', next.email), String(data.accentCustomized));
+      }
+    } catch {
+      // Cached account data is the offline fallback.
+    }
+  };
+
   const setAccount = (next: Account | null) => {
     setAccountState(next);
     saveStored('babel-account', next);
@@ -1310,36 +1361,52 @@ function App() {
     saveStored(accountStorageKey('babel-reading-preferences', next.email), nextPreferences);
     saveStored(accountStorageKey('babel-reading-activity', next.email), nextActivity);
     saveStored(accountStorageKey('babel-profile', next.email), nextProfile);
+    void hydrateAccountFromCloud(next);
   };
   const updateHistory = (record: ReadingRecord) => {
     setHistory((current) => {
       const next = [record, ...current.filter((item) => item.novelId !== record.novelId)];
-      if (account) saveStored(accountStorageKey('babel-history', account.email), next);
+      if (account) {
+        saveStored(accountStorageKey('babel-history', account.email), next);
+        saveCloudPatch({ history: next });
+      }
       return next;
     });
   };
   const removeHistory = (novelId: string) => {
     setHistory((current) => {
       const next = current.filter((item) => item.novelId !== novelId);
-      if (account) saveStored(accountStorageKey('babel-history', account.email), next);
+      if (account) {
+        saveStored(accountStorageKey('babel-history', account.email), next);
+        saveCloudPatch({ history: next });
+      }
       return next;
     });
   };
   const clearHistory = () => {
     setHistory([]);
-    if (account) saveStored(accountStorageKey('babel-history', account.email), []);
+    if (account) {
+      saveStored(accountStorageKey('babel-history', account.email), []);
+      saveCloudPatch({ history: [] });
+    }
   };
   const toggleFavorite = (novelId: string) => {
     setFavorites((current) => {
       const next = current.includes(novelId) ? current.filter((id) => id !== novelId) : [...current, novelId];
-      if (account) saveStored(accountStorageKey('babel-favorites', account.email), next);
+      if (account) {
+        saveStored(accountStorageKey('babel-favorites', account.email), next);
+        saveCloudPatch({ favorites: next });
+      }
       return next;
     });
   };
   const toggleBookmark = (novelId: string) => {
     setBookmarks((current) => {
       const next = current.includes(novelId) ? current.filter((id) => id !== novelId) : [...current, novelId];
-      if (account) saveStored(accountStorageKey('babel-bookmarks', account.email), next);
+      if (account) {
+        saveStored(accountStorageKey('babel-bookmarks', account.email), next);
+        saveCloudPatch({ bookmarks: next });
+      }
       return next;
     });
   };
@@ -1348,6 +1415,7 @@ function App() {
     if (account) {
       saveStored(accountStorageKey('babel-reading-preferences', account.email), next);
       if (next.accentColor !== preferences.accentColor) localStorage.setItem(accountStorageKey('babel-accent-customized', account.email), 'true');
+      saveCloudPatch({ preferences: next, accentCustomized: next.accentColor !== defaultPreferences.accentColor });
     } else {
       saveStored('babel-reading-preferences', next);
     }
@@ -1357,14 +1425,19 @@ function App() {
       const id = `${session.novelId}:${session.chapterId}:${session.startedAt}`;
       if (current.some((item) => item.id === id)) return current;
       const next = [...current, { ...session, id }];
-      if (account) saveStored(accountStorageKey('babel-reading-activity', account.email), next);
+      if (account) {
+        saveStored(accountStorageKey('babel-reading-activity', account.email), next);
+        saveCloudPatch({ activity: next });
+      }
       return next;
     });
   };
   const setProfile = (next: ProfileSettings) => {
     setProfileState(next);
-    if (account) saveStored(accountStorageKey('babel-profile', account.email), next);
-    else saveStored('babel-profile', next);
+    if (account) {
+      saveStored(accountStorageKey('babel-profile', account.email), next);
+      saveCloudPatch({ profile: next });
+    } else saveStored('babel-profile', next);
   };
   const activityStats = getReadingStats(activity, favorites, bookmarks, [featuredNovel]);
   const serverBadges = getServerBadgeStatus(account);
