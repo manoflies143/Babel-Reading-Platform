@@ -139,6 +139,32 @@ router.get("/auth/me", async (req, res) => {
   return res.json({ account: publicAccount(account) });
 });
 
+router.get("/auth/data", async (req, res) => {
+  const account = await authenticatedAccount(req);
+  if (!account) return res.status(401).json({ error: "Session is invalid or expired." });
+  const result = await db.execute(sql`SELECT data FROM account_data WHERE account_id = ${account.id} LIMIT 1`);
+  const row = result.rows[0] as { data?: unknown } | undefined;
+  return res.json({ data: row?.data ?? {} });
+});
+
+router.put("/auth/data", async (req, res) => {
+  const account = await authenticatedAccount(req);
+  if (!account) return res.status(401).json({ error: "Session is invalid or expired." });
+  const patch = req.body?.data;
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+    return res.status(400).json({ error: "Account data must be an object." });
+  }
+  const serialized = JSON.stringify(patch);
+  if (serialized.length > 2_000_000) return res.status(413).json({ error: "Account data is too large." });
+  await db.execute(sql`
+    INSERT INTO account_data (account_id, data, updated_at)
+    VALUES (${account.id}, ${serialized}::jsonb, NOW())
+    ON CONFLICT (account_id)
+    DO UPDATE SET data = account_data.data || EXCLUDED.data, updated_at = NOW()
+  `);
+  return res.status(204).end();
+});
+
 router.post("/auth/logout", async (req, res) => {
   const auth = String(req.headers.authorization ?? "");
   if (auth.startsWith("Bearer ")) {
