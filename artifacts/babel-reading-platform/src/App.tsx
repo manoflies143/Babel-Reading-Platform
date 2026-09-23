@@ -1141,7 +1141,7 @@ function ProfilePage() {
 
     // Replace the current route so the deleted account cannot remain reachable
     // through the browser history.
-    setLocation('/auth', { replace: true });
+    setLocation('/auth');
   };
   if (!account) return <AuthPage />;
   return (
