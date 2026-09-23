@@ -20,4 +20,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm run typecheck
-      - run: pnpm --filter @workspace/babel-reading-platform run build
+      - run: pnpm run build
