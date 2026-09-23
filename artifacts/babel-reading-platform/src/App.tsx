@@ -1175,6 +1175,22 @@ function NotFound() {
   return <div className="flex min-h-[80dvh] flex-col items-center justify-center px-5 text-center"><p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-accent">404 · off the shelf</p><h1 className="mt-4 font-display text-5xl">This page is still being written.</h1><p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">The story you are looking for is not in this catalogue.</p><Link href="/" className="mt-7 inline-flex items-center gap-2 rounded-lg bg-sidebar px-4 py-2.5 text-xs font-semibold text-sidebar-foreground" data-testid="link-not-found-home">Return home <ArrowRight size={14} /></Link></div>;
 }
 
+function PublisherRoute() {
+  const { account } = useBabel();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!account) {
+      setLocation('/auth');
+    } else if (account.role !== 'publisher') {
+      setLocation('/');
+    }
+  }, [account]);
+
+  if (!account || account.role !== 'publisher') return null;
+  return <PublisherPage />;
+}
+
 function Router({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) => void }) {
   const [location] = useLocation();
   return (
@@ -1184,7 +1200,7 @@ function Router({ theme, setTheme }: { theme: Theme; setTheme: (theme: Theme) =>
           <Route path="/" component={HomePage} />
           <Route path="/discover" component={DiscoverPage} />
           <Route path="/library" component={LibraryPage} />
-          <Route path="/publisher" component={PublisherPage} />
+          <Route path="/publisher" component={PublisherRoute} />
           <Route path="/settings"><SettingsPage theme={theme} setTheme={setTheme} /></Route>
           <Route path="/novel/:id" component={NovelPage} />
           <Route path="/auth" component={AuthPage} />
