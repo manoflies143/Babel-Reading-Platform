@@ -201,6 +201,7 @@ router.delete("/auth/account", async (req, res) => {
       .set({ deletedAt: new Date() })
       .where(eq(accountsTable.id, account.id));
     await tx.delete(sessionsTable).where(eq(sessionsTable.accountId, account.id));
+    await tx.execute(sql`DELETE FROM account_data WHERE account_id = ${account.id}`);
   });
 
   return res.status(204).end();
