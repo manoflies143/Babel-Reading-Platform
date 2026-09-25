@@ -1,4 +1,4 @@
-import { createContext, type CSSProperties, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, type CSSProperties, type ReactNode, type ChangeEvent, type MouseEvent, type TouchEvent, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -449,12 +449,12 @@ function Shell({
   const isActive = (href: string) => href === '/' ? location === '/' : location.startsWith(href);
   const mainSections = ['/', '/discover', '/library', '/profile'];
   const currentMainSection = mainSections.indexOf(location === '/' ? '/' : mainSections.find((section) => section !== '/' && location.startsWith(section)) ?? '');
-  const handleGlobalTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleGlobalTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
     const blocked = Boolean(target.closest('input, textarea, select, button, a, [role="button"], [contenteditable="true"], [data-reader-surface]'));
     touchGesture.current = { x: event.touches[0].clientX, y: event.touches[0].clientY, blocked };
   };
-  const handleGlobalTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleGlobalTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
     const gesture = touchGesture.current;
     touchGesture.current = null;
     if (!gesture || gesture.blocked || currentMainSection < 0 || window.getSelection()?.toString()) return;
@@ -785,13 +785,13 @@ function NovelPage() {
     }
     changeChapter(direction);
   };
-  const handleTouchEnd = (event: React.TouchEvent) => {
+  const handleTouchEnd = (event: TouchEvent) => {
     if (touchStart.current === null || preferences.mode !== 'Swipe/Page Mode') return;
     const distance = event.changedTouches[0].clientX - touchStart.current;
     if (Math.abs(distance) > 55) movePage(distance < 0 ? 1 : -1);
     touchStart.current = null;
   };
-  const handleReaderClick = (event: React.MouseEvent<HTMLElement>) => {
+  const handleReaderClick = (event: MouseEvent<HTMLElement>) => {
     if (preferences.mode === 'Tap Navigation' && !controlsVisible) {
       const rect = event.currentTarget.getBoundingClientRect();
       movePage(event.clientX - rect.left > rect.width / 2 ? 1 : -1);
@@ -896,7 +896,7 @@ function PublisherPage() {
 
   const toggleGenre = (genre: Genre) => setSelectedGenres((current) => current.includes(genre) ? current.filter((item) => item !== genre) : [...current, genre]);
   const addChapter = () => { if (!newChapter.trim()) return; setChapters((current) => [...current, { id: Date.now(), number: Number(newChapterNumber) || current.length + 1, title: newChapter.trim(), text: newChapterText, headerImage: newChapterHeaderImage, status: 'Draft' }]); setNewChapter(''); setNewChapterNumber(String(chapters.length + 2)); setNewChapterText(''); setNewChapterHeaderImage(null); };
-  const selectChapterHeaderImage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const selectChapterHeaderImage = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
@@ -909,7 +909,7 @@ function PublisherPage() {
   };
   const deleteChapter = (id: number) => setChapters((current) => current.filter((chapter) => chapter.id !== id));
   const saveNovel = () => { setPublisherNotice('Draft saved on this device.'); setView('overview'); };
-  const importManuscript = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const importManuscript = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     setImportedFileName(file.name);
@@ -1128,7 +1128,7 @@ function ProfilePage() {
     (definition) => isServerEarned(definition) || progressFor(definition) >= definition.target,
   );
   const featured = earned.find((definition) => definition.id === profile.featuredBadge) ?? earned[0];
-  const handleAvatar = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatar = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) {
