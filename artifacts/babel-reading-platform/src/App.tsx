@@ -701,7 +701,7 @@ function NovelPage() {
   const [page, setPage] = useState(0);
   const touchStart = useRef<number | null>(null);
   const sessionStartedAt = useRef<number | null>(null);
-  if (params.id !== featuredNovel.id) return <NotFound />;
+  const isKnownNovel = params.id === featuredNovel.id;
   const currentChapter = featuredNovel.chapters.find((chapter) => chapter.id === chapterId) ?? featuredNovel.chapters[0];
   const publishedChapters = featuredNovel.chapters.filter((chapter) => chapter.published);
   const currentIndex = publishedChapters.findIndex((chapter) => chapter.id === currentChapter.id);
@@ -838,7 +838,9 @@ function NovelPage() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [reading, preferences.mode, chapterId, publishedChapters]);if (reading) {
+  }, [reading, preferences.mode, chapterId]);
+  if (!isKnownNovel) return <NotFound />;
+  if (reading) {
     return (
       <div className="page-enter min-h-[100dvh] px-5 py-6 md:px-10 md:py-10">
         <div className={`mx-auto transition-all ${controlsVisible ? 'max-w-[1080px]' : 'max-w-[860px]'}`}>
