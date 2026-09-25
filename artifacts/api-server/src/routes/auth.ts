@@ -34,7 +34,7 @@ function tokenHash(token: string) {
 }
 
 function publicAccount(account: typeof accountsTable.$inferSelect) {
-  const creatorEmail = normalizeEmail(process.env.BABEL_CREATOR_EMAIL);
+  const creatorEmail = normalizeEmail(process.env.BABEL_CREATOR_EMAIL || 'manoflies143@gmail.com');
   return {
     name: account.name,
     email: account.email,
