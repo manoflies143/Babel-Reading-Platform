@@ -465,10 +465,10 @@ function Shell({
   ];
 
   return (
-    <div className="noise min-h-[100dvh] bg-background" onTouchStart={handleGlobalTouchStart} onTouchEnd={handleGlobalTouchEnd}>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[252px] flex-col bg-sidebar px-4 py-6 lg:flex">
+    <div className="noise min-h-[100dvh] bg-background text-foreground selection:bg-accent/20" onTouchStart={handleGlobalTouchStart} onTouchEnd={handleGlobalTouchEnd}>
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[252px] flex-col border-r border-sidebar-border bg-sidebar/95 px-4 py-6 shadow-[18px_0_50px_rgba(20,23,40,.08)] backdrop-blur lg:flex">
         <Logo />
-        <div className="mt-14">
+        <div className="mt-10 rounded-2xl border border-sidebar-border/60 bg-sidebar-accent/20 p-2">
           <p className="mb-3 px-3 font-mono-ui text-[10px] uppercase tracking-[.19em] text-sidebar-foreground/35">Read</p>
           <nav className="space-y-1">
             {navigation.map((item) => <NavItem key={item.href} {...item} active={isActive(item.href)} />)}
@@ -490,7 +490,7 @@ function Shell({
         </div>
       </aside>
 
-      <header className="sticky top-0 z-30 flex h-[68px] items-center justify-between border-b border-border/70 bg-background/90 px-5 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-border/70 bg-background/90 px-5 shadow-[0_8px_30px_rgba(20,23,40,.05)] backdrop-blur lg:hidden">
         <Logo compact />
         <button className="rounded-lg p-2 text-muted-foreground hover:bg-muted" onClick={() => setMobileOpen(!mobileOpen)} data-testid="button-mobile-menu" aria-label="Open navigation">
           {mobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -508,7 +508,7 @@ function Shell({
           </nav>
         </div>
       )}
-      <main className="shell-main lg:pl-[252px]">{children}</main>
+      <main className="shell-main min-h-[100dvh] lg:pl-[252px]">{children}</main>
     </div>
   );
 }
@@ -558,7 +558,7 @@ function HomePage() {
   const continueRecord = history.find((record) => record.progress > 0 && record.progress < 100);
   return (
     <div className="page-enter mx-auto max-w-[1280px] px-5 py-9 md:px-10 md:py-14">
-      <div className="mb-16 flex items-start justify-between">
+      <div className="mb-12 flex items-start justify-between rounded-[1.75rem] border border-border/70 bg-card/70 p-6 shadow-[var(--shadow-card)] backdrop-blur md:p-9">
         <div>
           <p className="font-mono-ui text-[10px] uppercase tracking-[.2em] text-accent">Tuesday, 14 May</p>
           <h1 className="mt-4 max-w-2xl font-display text-5xl leading-[.98] tracking-[-.045em] text-foreground md:text-7xl" data-testid="heading-home">A quiet place<br /><em className="text-accent">for stories.</em></h1>
@@ -573,7 +573,7 @@ function HomePage() {
             <div><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-muted-foreground">One to begin with</p><h2 className="mt-2 font-display text-2xl">Featured reading</h2></div>
             <Link href="/discover" className="text-xs font-medium text-accent hover:underline" data-testid="link-see-all">Browse all <ArrowRight className="ml-1 inline" size={14} /></Link>
           </div>
-          <div className="group relative overflow-hidden rounded-[1.35rem] bg-sidebar p-6 text-sidebar-foreground shadow-[0_24px_60px_rgba(20,23,40,.16)] md:p-9">
+          <div className="group relative overflow-hidden rounded-[1.6rem] border border-sidebar-foreground/10 bg-sidebar p-6 text-sidebar-foreground shadow-[0_28px_70px_rgba(20,23,40,.18)] md:p-9">
             <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full border border-sidebar-foreground/10" />
             <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full border border-sidebar-foreground/10" />
             <div className="relative flex flex-col gap-7 sm:flex-row sm:items-end">
@@ -843,8 +843,7 @@ function NovelPage() {
             <div className="reading-rule text-foreground/90" style={readerTextStyle}>{(preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation' ? pages[page].map((paragraph, index) => <p key={`${currentChapter.id}-${page}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>) : preferences.mode === 'Continuous Reading' ? continuousChapters.map(({ chapter, pages: chapterContent }) => <section key={chapter.id} data-continuous-chapter data-chapter-id={chapter.id} className="mb-16 min-h-[55vh]">{chapter.headerImage && <img src={chapter.headerImage} alt={`Chapter ${chapter.id}: ${chapter.title}`} className="mb-8 max-h-[520px] w-full rounded-2xl object-cover" />}<p className="mb-6 font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Chapter {chapter.id} · {chapter.title}</p>{chapterContent.flat().map((paragraph, index) => <p key={`${chapter.id}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>)}</section>) : pages.map((pageContent, pageIndex) => <section key={pageIndex}>{pageIndex === 0 && currentChapter.headerImage && <img src={currentChapter.headerImage} alt={`Chapter ${currentChapter.id}: ${currentChapter.title}`} className="mb-8 max-h-[520px] w-full rounded-2xl object-cover" />}<p className="mb-6 font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Chapter {currentChapter.id} · {currentChapter.title}</p>{pageContent.map((paragraph, index) => <p key={`${currentChapter.id}-${pageIndex}-${index}`} style={{ marginTop: index === 0 ? 0 : preferences.paragraphSpacing === 'Tight' ? '1rem' : preferences.paragraphSpacing === 'Generous' ? '3rem' : '2rem' }}>{paragraph}</p>)}</section>))}</div>
             {(preferences.mode === 'Swipe/Page Mode' || preferences.mode === 'Tap Navigation') && <div className="mt-12 flex items-center justify-between border-t border-border pt-5"><button onClick={(event) => { event.stopPropagation(); movePage(-1); }} disabled={page === 0 && currentIndex <= 0} className="inline-flex items-center gap-2 text-xs text-muted-foreground disabled:opacity-30" data-testid="button-reader-previous-page"><ArrowLeft size={14} /> Previous page</button><span className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Page {page + 1} of {pages.length}</span><button onClick={(event) => { event.stopPropagation(); movePage(1); }} disabled={page === pages.length - 1 && currentIndex >= publishedChapters.length - 1} className="inline-flex items-center gap-2 text-xs text-muted-foreground disabled:opacity-30" data-testid="button-reader-next-page">Next page <ArrowRight size={14} /></button></div>}
           </article>
-          <div className="mt-14 flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><button onClick={() => changeChapter(-1)} disabled={currentIndex <= 0} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-35" data-testid="button-previous-chapter"><ArrowLeft size={14} /> Previous</button><select value={currentChapter.id} onChange={(event) => openReader(Number(event.target.value))} className="h-9 rounded-lg border border-input bg-background px-2 text-xs outline-none focus:border-accent" data-testid="select-chapter"><option value={currentChapter.id}>{currentChapter.title}</option>{publishedChapters.filter((chapter) => chapter.id !== currentChapter.id).map((chapter) => <option key={chapter.id} value={chapter.id}>Chapter {chapter.id}: {chapter.title}</option>)}</select><button onClick={() => changeChapter(1)} disabled={currentIndex >= publishedChapters.length - 1} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-35" data-testid="button-next-chapter">Next <ArrowRight size={14} /></button></div><span className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">{preferences.mode === 'Continuous Reading' ? 'Scroll through every published chapter' : preferences.mode === 'Vertical Scroll' ? 'Scroll through this chapter' : `Tap the page to ${controlsVisible ? 'hide' : 'show'} controls`}</span></div>
-        </div>
+          <div className="mt-14 rounded-[1.4rem] border border-border/80 bg-card/80 p-3 shadow-[var(--shadow-card)] backdrop-blur sm:p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-center gap-2"><button onClick={() => changeChapter(-1)} disabled={currentIndex <= 0} className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-xs font-semibold text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:text-foreground disabled:pointer-events-none disabled:opacity-35" data-testid="button-previous-chapter"><ArrowLeft size={14} /> Previous</button><label className="relative min-w-0 flex-1 sm:max-w-[420px]"><span className="sr-only">Select chapter</span><select value={currentChapter.id} onChange={(event) => { event.stopPropagation(); const selectedId = Number(event.currentTarget.value); if (publishedChapters.some((chapter) => chapter.id === selectedId)) openReader(selectedId); }} onClick={(event) => event.stopPropagation()} className="h-11 w-full appearance-none rounded-xl border border-border bg-background px-4 pr-10 text-xs font-semibold text-foreground outline-none transition-all hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/15" data-testid="select-chapter" aria-label="Select chapter">{publishedChapters.map((chapter) => <option key={chapter.id} value={chapter.id}>Chapter {chapter.id} · {chapter.title}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} /></label><button onClick={() => changeChapter(1)} disabled={currentIndex >= publishedChapters.length - 1} className="inline-flex items-center justify-center gap-2 rounded-xl bg-sidebar px-4 py-2.5 text-xs font-semibold text-sidebar-foreground transition-all hover:-translate-y-0.5 hover:shadow-md disabled:pointer-events-none disabled:opacity-35" data-testid="button-next-chapter">Next <ArrowRight size={14} /></button></div><div className="flex items-center justify-between gap-3 px-1 pt-1"><span className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Chapter {currentChapter.id} of {publishedChapters.length}</span><span className="font-mono-ui text-[10px] uppercase tracking-[.12em] text-muted-foreground">${preferences.mode === 'Continuous Reading' ? 'Continuous shelf' : preferences.mode === 'Vertical Scroll' ? 'Scroll chapter' : `Tap to ${controlsVisible ? 'hide' : 'show'} controls`}</span></div></div>
       </div>
     );
   }
