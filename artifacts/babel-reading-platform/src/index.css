@@ -255,3 +255,84 @@
   .badge-mark:hover { transform: translateY(-2px); }
   .badge-mark-featured:hover { transform: translateY(-4px) scale(1.02); }
 }
+
+
+/* Special identity system — intentionally breaks the circular badge language */
+.badge-mark-special {
+  border: 0;
+  border-radius: 18px 8px 22px 10px;
+  clip-path: polygon(16% 3%, 82% 0, 100% 28%, 91% 78%, 68% 100%, 22% 92%, 0 58%, 7% 20%);
+  background:
+    linear-gradient(135deg, hsl(var(--accent) / .16), hsl(var(--background) / .9) 46%, hsl(var(--accent) / .08)),
+    hsl(var(--card));
+  box-shadow: 0 14px 34px hsl(var(--accent) / .14), inset 0 0 0 1px hsl(var(--accent) / .38);
+}
+.badge-mark-special::before {
+  inset: -55%;
+  background:
+    conic-gradient(from 35deg, transparent 0 18%, hsl(var(--accent) / .65) 24%, transparent 31% 58%, hsl(var(--accent) / .3) 65%, transparent 73%),
+    radial-gradient(circle, hsl(var(--accent) / .22), transparent 55%);
+  opacity: .9;
+  animation: babel-cosmic-drift 7s linear infinite;
+}
+.badge-mark-special::after {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  clip-path: polygon(18% 0, 83% 5%, 100% 38%, 82% 94%, 30% 100%, 0 58%);
+  border: 1px solid hsl(var(--accent) / .3);
+  pointer-events: none;
+}
+.badge-mark-special .badge-mark-ring {
+  border: 0;
+  border-radius: 12px 4px 14px 5px;
+  clip-path: polygon(20% 0, 86% 8%, 100% 43%, 77% 100%, 15% 88%, 0 34%);
+  background: radial-gradient(circle at 35% 25%, hsl(var(--accent) / .28), hsl(var(--background) / .9));
+  box-shadow: 0 0 18px hsl(var(--accent) / .28), 0 0 0 1px hsl(var(--accent) / .5);
+}
+.badge-mark-special .badge-mark-label {
+  font-family: var(--app-font-serif);
+  font-size: 7px;
+  letter-spacing: .18em;
+  text-shadow: 0 0 10px hsl(var(--accent) / .45);
+}
+.badge-mark-special.badge-mark-featured {
+  height: 92px;
+  width: 92px;
+  transform: rotate(-2deg);
+  background:
+    radial-gradient(circle at 70% 20%, hsl(var(--accent) / .95), transparent 28%),
+    linear-gradient(145deg, hsl(var(--background)), hsl(var(--accent) / .72) 58%, hsl(var(--background)));
+  box-shadow: 0 20px 48px hsl(var(--accent) / .3), 0 0 32px hsl(var(--accent) / .16), inset 0 1px 0 rgba(255,255,255,.3);
+}
+.badge-mark-special.badge-mark-featured .badge-mark-ring {
+  height: 50px;
+  width: 50px;
+  transform: rotate(2deg);
+  color: hsl(var(--accent-foreground));
+}
+.badge-mark-special.badge-mark-featured .badge-mark-label {
+  color: hsl(var(--accent-foreground));
+  font-size: 7px;
+  font-weight: 700;
+}
+.badge-mark-glow {
+  position: absolute;
+  inset: -18px;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 40%;
+  background: radial-gradient(circle, hsl(var(--accent) / .22), transparent 62%);
+  filter: blur(8px);
+  animation: babel-cosmic-pulse 3.8s ease-in-out infinite;
+}
+@keyframes babel-cosmic-drift {
+  to { transform: rotate(360deg); }
+}
+@keyframes babel-cosmic-pulse {
+  0%, 100% { opacity: .45; transform: scale(.9); }
+  50% { opacity: .95; transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge-mark-special::before, .badge-mark-glow { animation: none; }
+}
