@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, type CSSProperties, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -1086,7 +1086,7 @@ function BadgeMark({ title, group, locked = false, featured = false, specialFont
   const style = special ? {
     '--badge-accent': accentMap[specialAccent ?? 'Babel Orange'],
     '--badge-font': fontMap[specialFont ?? 'Fraunces'],
-  } as React.CSSProperties : undefined;
+  } as CSSProperties : undefined;
   return (
     <div className={`badge-mark ${special ? 'badge-mark-special' : ''} ${locked ? 'badge-mark-locked' : featured ? 'badge-mark-featured' : 'badge-mark-earned'}`} style={style} title={title} aria-label={title}>
       <div className="badge-mark-ring"><span className="badge-mark-glow" aria-hidden="true" /><Icon size={special ? 24 : 21} strokeWidth={1.8} /></div>
