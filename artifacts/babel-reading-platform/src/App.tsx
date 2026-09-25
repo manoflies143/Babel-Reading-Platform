@@ -1066,7 +1066,7 @@ function BadgeMark({ title, group, locked = false, featured = false }: { title: 
   const label = title === 'The First Tower' ? 'BABEL' : title.split(' ').slice(0, 2).join(' ');
   return (
     <div className={`badge-mark ${special ? 'badge-mark-special' : ''} ${locked ? 'badge-mark-locked' : featured ? 'badge-mark-featured' : 'badge-mark-earned'}`} title={title} aria-label={title}>
-      <div className="badge-mark-ring"><Icon size={special ? 22 : 20} strokeWidth={1.8} /></div>
+      <div className="badge-mark-ring"><span className="badge-mark-glow" aria-hidden="true" /><Icon size={special ? 24 : 21} strokeWidth={1.8} /></div>
       <span className="badge-mark-label">{label}</span>
     </div>
   );
@@ -1092,6 +1092,7 @@ function ProfilePage() {
   const [, setLocation] = useLocation();
   const [showAchievements, setShowAchievements] = useState(false);
   const [profileNotice, setProfileNotice] = useState('');
+  const [badgeVerification, setBadgeVerification] = useState(false);
   const stats = getReadingStats(activity, favorites, bookmarks, [featuredNovel]);
   const progressFor = (definition: AchievementDefinition) => achievementProgress(definition, stats);
   const serverBadges = getServerBadgeStatus(account);
@@ -1115,6 +1116,24 @@ function ProfilePage() {
     reader.onload = () => setProfile({ ...profile, avatar: String(reader.result) });
     reader.readAsDataURL(file);
   };
+  const verifySpecialBadges = async () => {
+    if (!account) return;
+    setBadgeVerification(true);
+    try {
+      const response = await authRequest('/me');
+      if (!response.ok) throw new Error('verification failed');
+      const data = await response.json() as { account?: Account };
+      if (!data.account) throw new Error('verification failed');
+      setAccount(data.account);
+      const status = getServerBadgeStatus(data.account);
+      setProfileNotice(status.creator ? 'Creator badge verified.' : status.foundingReader ? 'Founding Reader #' + status.foundingReaderNumber + ' verified.' : 'No special badge entitlement is attached to this account.');
+    } catch {
+      setProfileNotice('Could not verify special badges right now.');
+    } finally {
+      setBadgeVerification(false);
+    }
+  };
+
   const deleteAccount = async () => {
     if (!account) return;
     const confirmed = window.confirm('Delete this Babel account and its account-owned local reading data? This cannot be undone.');
@@ -1154,7 +1173,7 @@ function ProfilePage() {
           <div className="flex flex-wrap items-center gap-4 border-b border-border pb-6"><div className="relative">{profile.avatar ? <img src={profile.avatar} alt={`${account.name} profile`} className="h-16 w-16 rounded-2xl object-cover" /> : <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent font-display text-xl text-accent-foreground">{account.name.slice(0, 2).toUpperCase()}</div>}<label className="absolute -bottom-2 -right-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground" title="Change profile picture"><Upload size={13} /><input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleAvatar} className="hidden" /></label></div><div><p className="font-display text-2xl">{account.name}</p><p className="mt-1 text-xs text-muted-foreground">{profile.profileTitle || 'Reader'} · {account.email}</p><p className="mt-2 font-mono-ui text-[10px] uppercase tracking-[.12em] text-accent">{account.role === 'publisher' ? 'Publisher account' : 'Reader account'}</p></div>{profile.avatar && <button onClick={() => setProfile({ ...profile, avatar: null })} className="ml-auto text-[11px] text-muted-foreground hover:text-destructive" data-testid="button-remove-avatar">Remove picture</button>}</div>
           <div className="mt-6 rounded-xl border border-border bg-muted/50 p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Profile identity</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="block"><span className="mb-1 block text-[11px] font-semibold">Display name</span><input value={account.name} onChange={(event) => setAccount({ ...account, name: event.target.value })} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-xs outline-none focus:border-accent" data-testid="input-profile-display-name" /></label><label className="block"><span className="mb-1 block text-[11px] font-semibold">Profile title</span><input value={profile.profileTitle} onChange={(event) => setProfile({ ...profile, profileTitle: event.target.value.slice(0, 32) })} placeholder="Reader, Archivist, Night Owl..." className="h-10 w-full rounded-lg border border-input bg-background px-3 text-xs outline-none focus:border-accent" data-testid="input-profile-title" /></label></div></div>
 <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Current streak</p><p className="mt-3 font-display text-2xl">{stats.currentStreak}</p><p className="mt-1 text-[11px] text-muted-foreground">days</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Longest streak</p><p className="mt-3 font-display text-2xl">{stats.longestStreak}</p><p className="mt-1 text-[11px] text-muted-foreground">days</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Chapters done</p><p className="mt-3 font-display text-2xl">{stats.chaptersCompleted}</p><p className="mt-1 text-[11px] text-muted-foreground">completed</p></div><div className="rounded-xl bg-muted p-4"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">Novels done</p><p className="mt-3 font-display text-2xl">{stats.novelsCompleted}</p><p className="mt-1 text-[11px] text-muted-foreground">completed</p></div></div>
-          <div className="badge-featured-panel mt-6 rounded-2xl border border-accent/25 bg-accent/10 p-5"><div className="flex items-center gap-4"><BadgeMark title={featured?.name ?? 'No featured badge'} group={featured?.group ?? 'Special'} featured={Boolean(featured)} /><div className="min-w-0 flex-1"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Featured badge</p><p className="mt-2 font-display text-xl">{featured?.name ?? 'Earn your first badge'}</p><p className="mt-1 text-xs text-muted-foreground">{featured?.description ?? 'Open a chapter to begin.'}</p></div>{featured && (profile.achievementsPublic ? <ShareButton title={`BABEL · ${featured.name}`} text={`BABEL · ${account.name}'s badge: ${featured.name} · ${featured.description}`} /> : <span className="text-[10px] text-muted-foreground">Private</span>)}</div></div>
+          <div className="mt-6 rounded-[1.35rem] border border-accent/25 bg-gradient-to-br from-accent/10 via-card to-card p-5 shadow-[0_18px_45px_rgba(20,23,40,.10)]"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Special identity</p><p className="mt-1 text-xs text-muted-foreground">Verify creator or founding-reader entitlement from Babel's account server.</p></div><button onClick={verifySpecialBadges} disabled={badgeVerification} className="rounded-xl border border-accent/30 bg-accent/10 px-3 py-2 text-[11px] font-semibold text-accent transition hover:bg-accent/15 disabled:opacity-50" data-testid="button-verify-special-badges">{badgeVerification ? 'Verifying…' : 'Verify now'}</button></div><div className="badge-featured-panel rounded-2xl border border-accent/25 bg-accent/10 p-5"><div className="flex items-center gap-4"><BadgeMark title={featured?.name ?? 'No featured badge'} group={featured?.group ?? 'Special'} featured={Boolean(featured)} /><div className="min-w-0 flex-1"><p className="font-mono-ui text-[10px] uppercase tracking-[.15em] text-accent">Featured badge</p><p className="mt-2 font-display text-xl">{featured?.name ?? 'Earn your first badge'}</p><p className="mt-1 text-xs text-muted-foreground">{featured?.description ?? 'Open a chapter to begin.'}</p></div>{featured && (profile.achievementsPublic ? <ShareButton title={`BABEL · ${featured.name}`} text={`BABEL · ${account.name}'s badge: ${featured.name} · ${featured.description}`} /> : <span className="text-[10px] text-muted-foreground">Private</span>)}</div></div>
           {account.role === 'publisher' && <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 p-4 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-accent">Publisher Plan</span> — Monthly subscription coming soon. Payment verification is not active in this prototype.</div>}
           {profileNotice && <p className="mt-4 rounded-lg bg-muted p-3 text-xs text-destructive" role="alert">{profileNotice}</p>}
           <div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => setShowAchievements(!showAchievements)} className="rounded-lg bg-sidebar px-4 py-3 text-xs font-semibold text-sidebar-foreground" data-testid="button-view-all-achievements">{showAchievements ? 'Hide achievements' : 'View all achievements'}</button>{profile.statsPublic ? <ShareButton title="BABEL reading progress" text={`BABEL · ${account.name} · ${stats.chaptersCompleted} chapters completed · ${stats.currentStreak} day reading streak · ${stats.readingSeconds ? Math.round(stats.readingSeconds / 3600) : 0}h reading time`} /> : <span className="flex items-center justify-center rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground">Stats are private</span>}</div>
