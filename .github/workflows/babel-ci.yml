@@ -33,3 +33,18 @@ jobs:
       - run: pnpm --filter @workspace/api-server run typecheck
       - run: pnpm --filter @workspace/babel-reading-platform run build
       - run: pnpm --filter @workspace/api-server run build
+
+        - name: Smoke test production start
+          run: |
+            set -e
+            pnpm start > /tmp/babel-start.log 2>&1 &
+            pid=$!
+            trap 'kill $pid 2>/dev/null || true' EXIT
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:5000/api/healthz >/dev/null; then
+                exit 0
+              fi
+              sleep 1
+            done
+            cat /tmp/babel-start.log
+            exit 1
