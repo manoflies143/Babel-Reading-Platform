@@ -1205,7 +1205,46 @@ function ProfilePage() {
           {account.role === 'publisher' && <div className="mt-6 rounded-xl border border-accent/30 bg-accent/10 p-4 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-accent">Publisher Plan</span> — Monthly subscription coming soon. Payment verification is not active in this prototype.</div>}
           {profileNotice && <p className="mt-4 rounded-lg bg-muted p-3 text-xs text-destructive" role="alert">{profileNotice}</p>}
           <div className="mt-6 grid gap-3 sm:grid-cols-2"><button onClick={() => setShowAchievements(!showAchievements)} className="rounded-lg bg-sidebar px-4 py-3 text-xs font-semibold text-sidebar-foreground" data-testid="button-view-all-achievements">{showAchievements ? 'Hide achievements' : 'View all achievements'}</button>{profile.statsPublic ? <ShareButton title="BABEL reading progress" text={`BABEL · ${account.name} · ${stats.chaptersCompleted} chapters completed · ${stats.currentStreak} day reading streak · ${stats.readingSeconds ? Math.round(stats.readingSeconds / 3600) : 0}h reading time`} /> : <span className="flex items-center justify-center rounded-lg border border-border px-3 py-2 text-[11px] text-muted-foreground">Stats are private</span>}</div>
-          {showAchievements && <div className="mt-6 space-y-6"><div className="badge-collection-header"><p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Your achievements</p><h3 className="mt-2 font-display text-2xl tracking-[-.02em]">Badge collection</h3><p className="mt-1 text-xs text-muted-foreground">Earned badges can be featured. Locked badges show real progress only.</p></div>{(['Reading', 'Streaks', 'Completion', 'Time', 'Exploration', 'Library', 'Special'] as AchievementGroup[]).map((group) => <section key={group}><p className="mb-3 font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">{group}</p><div className="grid gap-3 sm:grid-cols-2">{achievementDefinitions.filter((definition) => definition.group === group).map((definition) => { const isEarned = isServerEarned(definition) || progressFor(definition) >= definition.target; const progress = isServerEarned(definition) ? definition.target : progressFor(definition); return <div key={definition.id} className="flex items-center gap-3 rounded-xl border border-border p-3"><BadgeMark title={definition.name} group={group} locked={!isEarned} featured={profile.featuredBadge === definition.id} /><div className="min-w-0 flex-1"><p className="text-xs font-semibold">{definition.name}</p><p className="mt-1 text-[11px] leading-4 text-muted-foreground">{definition.description}</p><div className="mt-2 h-1 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (progress / definition.target) * 100)}%` }} /></div><p className="mt-1 font-mono-ui text-[9px] text-muted-foreground">{Math.min(progress, definition.target)} / {definition.target}</p></div>{isEarned ? <button onClick={() => setProfile({ ...profile, featuredBadge: definition.id })} className="rounded-lg border border-border px-2 py-1 text-[10px] hover:bg-muted" data-testid={`button-feature-badge-${definition.id}`}>{profile.featuredBadge === definition.id ? 'Featured' : 'Feature'}</button> : <span className="text-[10px] text-muted-foreground">Locked</span>}</div>; })}</div></section>)}</div>}
+          {showAchievements && (
+            <div className="mt-6 space-y-6">
+              <div className="badge-collection-header">
+                <p className="font-mono-ui text-[10px] uppercase tracking-[.18em] text-accent">Your achievements</p>
+                <h3 className="mt-2 font-display text-2xl tracking-[-.02em]">Badge collection</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Earned badges can be featured. Locked badges show real progress only.</p>
+              </div>
+              {(['Reading', 'Streaks', 'Completion', 'Time', 'Exploration', 'Library', 'Special'] as AchievementGroup[]).map((group) => (
+                <section key={group}>
+                  <p className="mb-3 font-mono-ui text-[10px] uppercase tracking-[.15em] text-muted-foreground">{group}</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {achievementDefinitions.filter((definition) => definition.group === group).map((definition) => {
+                      const isEarned = isServerEarned(definition) || progressFor(definition) >= definition.target;
+                      const progress = isServerEarned(definition) ? definition.target : progressFor(definition);
+                      return (
+                        <div key={definition.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
+                          <BadgeMark title={definition.name} group={group} locked={!isEarned} featured={profile.featuredBadge === definition.id} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold">{definition.name}</p>
+                            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{definition.description}</p>
+                            <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (progress / definition.target) * 100)}%` }} />
+                            </div>
+                            <p className="mt-1 font-mono-ui text-[9px] text-muted-foreground">{Math.min(progress, definition.target)} / {definition.target}</p>
+                          </div>
+                          {isEarned ? (
+                            <button onClick={() => setProfile({ ...profile, featuredBadge: definition.id })} className="rounded-lg border border-border px-2 py-1 text-[10px] hover:bg-muted" data-testid={`button-feature-badge-${definition.id}`}>
+                              {profile.featuredBadge === definition.id ? 'Featured' : 'Feature'}
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">Locked</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
         </section>
         <aside className="space-y-5">
           <div className="rounded-2xl border border-border bg-card p-5"><h3 className="font-display text-xl">Your account</h3><div className="mt-5 space-y-2"><Link href="/library" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open my library <ArrowRight size={14} /></Link>{account.role === 'publisher' && <Link href="/publisher" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Open publisher desk <ArrowRight size={14} /></Link>}<Link href="/settings" className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5 text-xs hover:bg-muted">Reading settings <ArrowRight size={14} /></Link></div></div>
