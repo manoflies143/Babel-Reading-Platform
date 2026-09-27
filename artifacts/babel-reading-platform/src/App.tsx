@@ -448,7 +448,7 @@ function Shell({
   children: ReactNode;
   theme: Theme;
 }) {
-  const { account } = useBabel();
+  const { account, profile } = useBabel();
   const [location, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const touchGesture = useRef<{ x: number; y: number; blocked: boolean } | null>(null);
