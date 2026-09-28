@@ -224,6 +224,13 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* Achievement families use distinct silhouettes within Babel's quiet ink-and-copper palette. */
+.badge-mark-reading { border-radius: 12px 4px 12px 4px; }
+.badge-mark-completion { clip-path: polygon(50% 0, 91% 18%, 100% 50%, 82% 88%, 50% 100%, 18% 88%, 0 50%, 9% 18%); }
+.badge-mark-streaks { border-radius: 50% 50% 9px 9px; }
+.badge-mark-time { border-radius: 50%; }
+.badge-mark-exploration { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.badge-mark-library { border-radius: 5px 15px 5px 15px; }
 .badge-mark-earned { border-color: hsl(var(--accent) / .28); background: hsl(var(--accent) / .07); }
 .badge-mark-featured {
   border-color: hsl(var(--accent) / .75);
