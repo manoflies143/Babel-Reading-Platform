@@ -177,7 +177,7 @@ const defaultPreferences: ReadingPreferences = {
 
 const defaultProfile: ProfileSettings = {
   avatar: null,
-  avatarFrame: 'Cosmic',
+  avatarFrame: 'None',
   featuredBadge: null,
   profileTitle: 'Reader',
   nameplateTitle: 'Cosmic Reader',
