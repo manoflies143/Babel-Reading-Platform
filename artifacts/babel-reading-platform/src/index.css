@@ -121,7 +121,7 @@
 }
 
 @layer utilities {
-  .font-display { font-family: var(--app-font-serif); }
+  .font-display { font-family: var(--badge-font, var(--app-font-serif)); }
   .font-mono-ui { font-family: var(--app-font-mono); }
   .text-balance { text-wrap: balance; }
   .noise::after {
@@ -193,7 +193,7 @@
   justify-content: center;
   gap: 2px;
   overflow: hidden;
-  border: 1px solid hsl(var(--accent) / .28);
+  border: 1px solid hsl(var(--badge-accent, var(--accent)) / .28);
   background: linear-gradient(145deg, hsl(var(--card)), hsl(var(--background)));
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
   clip-path: var(--badge-cut);
@@ -202,7 +202,7 @@
   content: '';
   position: absolute;
   inset: -35%;
-  background: linear-gradient(135deg, transparent 25%, hsl(var(--accent) / .12), transparent 72%);
+  background: linear-gradient(135deg, transparent 25%, hsl(var(--badge-accent, var(--accent)) / .12), transparent 72%);
   opacity: .9;
 }
 .badge-mark-ring {
@@ -213,8 +213,8 @@
   width: 42px;
   align-items: center;
   justify-content: center;
-  border: 1px solid hsl(var(--accent) / .38);
-  color: hsl(var(--accent));
+  border: 1px solid hsl(var(--badge-accent, var(--accent)) / .38);
+  color: hsl(var(--badge-accent, var(--accent)));
   background: hsl(var(--background) / .88);
   clip-path: var(--badge-ring-cut, none);
 }
@@ -273,14 +273,14 @@
 .badge-mark-special::before {
   inset: -55%;
   background:
-    conic-gradient(from 35deg, transparent 0 18%, hsl(var(--accent) / .65) 24%, transparent 31% 58%, hsl(var(--accent) / .3) 65%, transparent 73%),
-    radial-gradient(circle, hsl(var(--accent) / .22), transparent 55%);
+    conic-gradient(from 35deg, transparent 0 18%, hsl(var(--badge-accent, var(--accent)) / .65) 24%, transparent 31% 58%, hsl(var(--badge-accent, var(--accent)) / .3) 65%, transparent 73%),
+    radial-gradient(circle, hsl(var(--badge-accent, var(--accent)) / .22), transparent 55%);
 }
 .badge-mark-special .badge-mark-ring {
   height: 44px;
   width: 44px;
   border: 0;
-  background: radial-gradient(circle at 35% 25%, hsl(var(--accent) / .28), hsl(var(--background) / .9));
+  background: radial-gradient(circle at 35% 25%, hsl(var(--badge-accent, var(--accent)) / .28), hsl(var(--background) / .9));
   box-shadow: 0 0 18px hsl(var(--accent) / .28), 0 0 0 1px hsl(var(--accent) / .5);
 }
 .badge-mark-special .badge-mark-label {
