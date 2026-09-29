@@ -753,6 +753,15 @@ function NovelPage() {
     setControlsVisible(true);
     sessionStartedAt.current = Date.now();
     saveReadingPosition(saved?.chapterId === nextChapter.id ? saved.progress : 0, nextChapter, saved?.chapterId === nextChapter.id ? saved.bookmarked : false);
+    // Keep the visible reader position aligned with the chapter used to open the reader.
+    // Continuous mode renders the whole shelf, so it must scroll to the selected/saved chapter.
+    window.setTimeout(() => {
+      if (preferences.mode === 'Continuous Reading') {
+        document.querySelector<HTMLElement>(`[data-continuous-chapter][data-chapter-id="${nextChapter.id}"]`)?.scrollIntoView({ behavior: 'auto', block: 'start' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
+    }, 0);
   };
   const selectChapter = (selectedId: number) => {
     const selected = publishedChapters.find((chapter) => chapter.id === selectedId);
